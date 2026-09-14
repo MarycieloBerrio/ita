@@ -134,7 +134,7 @@ export default function ServiceEditor({
           </label>
           {mode === 'fixed' ? (
             <label className="field">
-              Tarifa fija · COP
+              Tarifa fija
               <input
                 inputMode="numeric"
                 placeholder="Pendiente"

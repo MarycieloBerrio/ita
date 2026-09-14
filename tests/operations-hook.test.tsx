@@ -125,11 +125,11 @@ it('una tarifa editada no pierde lo escrito ni adopta una versión concurrente s
   };
   request.mockRejectedValueOnce(new ApiError('Otra sesión modificó la tarifa', 'P0001'));
   const { rerender } = render(<PriceCell service={service} owner />, { wrapper });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Tarifa COP de Cepillado' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Tarifa de Cepillado' }), {
     target: { value: '35000' },
   });
   rerender(<PriceCell service={{ ...service, version: 2, fixed_price: 32000 }} owner />);
-  expect(screen.getByRole('textbox', { name: 'Tarifa COP de Cepillado' })).toHaveValue('35000');
+  expect(screen.getByRole('textbox', { name: 'Tarifa de Cepillado' })).toHaveValue('35000');
   expect(screen.getByRole('alert')).toHaveTextContent('Otra sesión cambió esta tarifa');
   fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
   await waitFor(() => expect(request).toHaveBeenCalled());
@@ -142,5 +142,5 @@ it('una tarifa editada no pierde lo escrito ni adopta una versión concurrente s
   fireEvent.click(
     screen.getByRole('button', { name: 'Descartar edición y cargar tarifa vigente' }),
   );
-  expect(screen.getByRole('textbox', { name: 'Tarifa COP de Cepillado' })).toHaveValue('32000');
+  expect(screen.getByRole('textbox', { name: 'Tarifa de Cepillado' })).toHaveValue('32000');
 });

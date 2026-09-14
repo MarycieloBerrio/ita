@@ -108,7 +108,7 @@ export default function ExpenseEditor({
           ) : null}
         </label>
         <label className="field">
-          Importe pagado · COP
+          Importe pagado
           <input inputMode="numeric" {...form.register('amount')} />
           {form.formState.errors.amount ? (
             <span className="error">{form.formState.errors.amount.message}</span>
@@ -131,7 +131,7 @@ export default function ExpenseEditor({
           ) : null}
         </label>
         <label className="field">
-          Fecha y hora real · Bogotá
+          Fecha y hora real
           <input type="datetime-local" step="1" {...form.register('paid_at')} />
         </label>
         {!correction ? (

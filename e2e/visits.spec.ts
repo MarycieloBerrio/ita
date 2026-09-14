@@ -55,8 +55,8 @@ test('visita Color y General: guarda plano, primera valoración posterior y dos 
   await expect(page.getByRole('button', { name: 'Finalizar trabajo técnico' })).toBeEnabled();
   await page.getByRole('button', { name: 'Finalizar trabajo técnico' }).click();
   await expect(page.getByText('Trabajo técnico finalizado.', { exact: false })).toBeVisible();
-  await expect(page.getByLabel('Precio de esta atención (COP)')).toBeEnabled();
-  await page.getByLabel('Precio de esta atención (COP)').fill('200000');
+  await expect(page.getByLabel('Precio de esta atención')).toBeEnabled();
+  await page.getByLabel('Precio de esta atención').fill('200000');
   await page.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
   await expect(generalTab).toBeEnabled();
   await generalTab.click();
@@ -65,7 +65,7 @@ test('visita Color y General: guarda plano, primera valoración posterior y dos 
   await expect(page.getByRole('button', { name: 'Registrar pago', exact: true })).toBeVisible();
   for (const amount of ['100000', '130000']) {
     await page.getByRole('button', { name: 'Registrar pago', exact: true }).click();
-    await page.getByLabel('Importe · COP', { exact: true }).fill(amount);
+    await page.getByLabel('Importe', { exact: true }).fill(amount);
     await page
       .getByRole('combobox', { name: 'Método', exact: true })
       .selectOption({ label: 'Efectivo ficticio' });
@@ -120,6 +120,19 @@ test('agenda usa Bogotá con dispositivo de otra zona y oculta citas ajenas', as
   });
   await sql.login(page, 'worker');
   await page.getByRole('link', { name: 'Agenda', exact: true }).click();
+  await expect(page.locator('.fc-prev-button .fc-icon')).toHaveCSS(
+    'font-family',
+    /ita-calendar-icons/,
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        [...document.fonts].some(
+          (font) => font.family === 'ita-calendar-icons' && font.status === 'loaded',
+        ),
+      ),
+    )
+    .toBe(true);
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
   await expect(page.locator('.fc-list-event')).toHaveCount(1);
   await expect(page.locator('.fc-list-event-time')).toContainText('10:00');

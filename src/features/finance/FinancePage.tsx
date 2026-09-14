@@ -53,7 +53,7 @@ function OwnerFinance() {
           <h1>
             <Wallet aria-hidden="true" /> Finanzas
           </h1>
-          <p>Cargos, dinero cobrado y caja, con fechas de Bogotá.</p>
+          <p>Cargos, dinero cobrado y caja.</p>
         </div>
         <div className="actions">
           <button
@@ -82,7 +82,7 @@ function OwnerFinance() {
           <button className="button-secondary" onClick={() => quickPeriod('month')}>
             Este mes
           </button>
-          <span className="muted">Semana: lunes a domingo · COP</span>
+          <span className="muted">Semana: lunes a domingo</span>
         </div>
         <form
           className="operations-filters"

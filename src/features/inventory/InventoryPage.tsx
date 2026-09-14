@@ -269,10 +269,10 @@ export default function InventoryPage() {
                       <th>Producto</th>
                       <th>Uso</th>
                       <th>Unidades</th>
-                      <th>Venta · COP</th>
+                      <th>Venta</th>
                       {owner ? (
                         <>
-                          <th>Costo · COP</th>
+                          <th>Costo</th>
                           <th>Administrar</th>
                         </>
                       ) : null}

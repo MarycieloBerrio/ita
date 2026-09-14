@@ -98,7 +98,7 @@ export default function CashDesk({
                 </select>
               </label>
               <label className="field">
-                Importe · COP
+                Importe
                 <input
                   inputMode="numeric"
                   value={amount}
@@ -130,7 +130,7 @@ export default function CashDesk({
             <h3>Cerrar caja</h3>
             <div className="form-grid">
               <label className="field">
-                Efectivo contado · COP
+                Efectivo contado
                 <input
                   inputMode="numeric"
                   value={counted}
@@ -165,7 +165,7 @@ export default function CashDesk({
           <p>No hay caja abierta.</p>
           <div className="form-grid">
             <label className="field">
-              Efectivo de apertura · COP
+              Efectivo de apertura
               <input
                 inputMode="numeric"
                 value={amount}

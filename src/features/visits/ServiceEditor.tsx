@@ -118,7 +118,7 @@ export default function ServiceEditor({
       )}
       <div className="form-grid">
         <label className="field">
-          Precio de esta atención (COP)
+          Precio de esta atención
           {service.price_mode === 'custom' ? (
             <input
               disabled={!canEdit && !firstValuation}

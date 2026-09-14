@@ -138,7 +138,7 @@ export default function ProductEditor({
             </select>
           </label>
           <label className="field">
-            Costo por unidad · COP
+            Costo por unidad
             <input inputMode="numeric" {...form.register('cost')} placeholder="Sin registrar" />
             {form.formState.errors.cost ? (
               <span className="error">{form.formState.errors.cost.message}</span>
@@ -148,7 +148,7 @@ export default function ProductEditor({
           </label>
           {usage !== 'internal' ? (
             <label className="field">
-              Precio de venta · COP
+              Precio de venta
               <input inputMode="numeric" {...form.register('sale_price')} />
               {form.formState.errors.sale_price ? (
                 <span className="error">{form.formState.errors.sale_price.message}</span>

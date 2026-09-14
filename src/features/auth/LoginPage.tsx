@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { ArrowRight, Flower2, LockKeyhole } from 'lucide-react';
 import { isConfigured, requireSupabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
+import BrandLogo from '../../components/BrandLogo';
 const schema = z.object({
   email: z.string().email('Escribe un correo válido.'),
   password: z.string().min(1, 'Escribe tu contraseña.'),
@@ -31,7 +32,7 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-story">
         <a className="wordmark" href="/">
-          ita<span>ESTUDIO DE BELLEZA</span>
+          <BrandLogo />
         </a>
         <div>
           <Flower2 size={80} strokeWidth={0.7} />
@@ -86,7 +87,7 @@ export default function LoginPage() {
             tu identidad.
           </p>
           <div className="login-private">
-            <LockKeyhole size={16} /> Acceso privado · Colombia · COP
+            <LockKeyhole size={16} /> Acceso privado
           </div>
         </div>
       </section>

@@ -12,8 +12,8 @@ export function csvCell(value: string | number | null | undefined): string {
 export function financeCsv(report: FinanceResult): string {
   const rows: (string | number | null | undefined)[][] = [
     ['ita · reporte operativo'],
-    ['Desde', report.from, 'Hasta', report.to, 'Zona horaria', 'America/Bogota'],
-    ['Moneda', report.currency, 'Generado', report.generated_at],
+    ['Desde', report.from, 'Hasta', report.to],
+    ['Generado', report.generated_at],
     [
       'Tipo',
       'Identificador',
@@ -21,7 +21,7 @@ export function financeCsv(report: FinanceResult): string {
       'Fecha real',
       'Concepto / categoría',
       'Método',
-      'Importe COP',
+      'Importe',
       'Estado',
       'Original',
     ],
@@ -79,10 +79,10 @@ export function financeCsv(report: FinanceResult): string {
       'Caja',
       'Apertura',
       'Cierre',
-      'Efectivo inicial COP',
-      'Esperado COP',
-      'Contado COP',
-      'Diferencia COP',
+      'Efectivo inicial',
+      'Esperado',
+      'Contado',
+      'Diferencia',
       'Notas',
     ],
     ...report.cash_sessions.map((item) => [
@@ -95,7 +95,7 @@ export function financeCsv(report: FinanceResult): string {
       item.difference,
       item.notes,
     ]),
-    ['Movimiento de caja', 'Caja', 'Fecha', 'Tipo', 'Importe COP', 'Motivo'],
+    ['Movimiento de caja', 'Caja', 'Fecha', 'Tipo', 'Importe', 'Motivo'],
     ...report.cash_movements.map((item) => [
       item.id,
       item.session_id,
@@ -135,7 +135,7 @@ export function bogotaInput(timestamp = new Date().toISOString(), seconds = fals
 
 export function fromBogotaInput(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(value))
-    throw new Error('Indica fecha y hora válidas en Bogotá.');
+    throw new Error('Indica fecha y hora válidas.');
   const seconds = value.length === 19;
   const parsed = new Date(`${value}${seconds ? '' : ':00'}-05:00`);
   // Date normalizes impossible dates (for example 30 February) instead of rejecting them.

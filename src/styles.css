@@ -166,21 +166,15 @@ small,
   z-index: 30;
 }
 .wordmark {
-  color: #264a3d;
-  font-family: Georgia, serif;
-  font-size: 60px;
-  line-height: 0.9;
-  letter-spacing: -5px;
-  padding: 0 16px;
   display: block;
+  width: 192px;
+  max-width: 100%;
 }
-.wordmark span {
-  font:
-    9px 'Segoe UI',
-    sans-serif;
-  letter-spacing: 2.4px;
+.brand-logo {
   display: block;
-  padding-top: 16px;
+  width: 100%;
+  height: 112px;
+  object-fit: contain;
 }
 .nav-caption {
   font-size: 10px;
@@ -1045,4 +1039,15 @@ tr:last-child td {
     animation: none !important;
     transition: none !important;
   }
+}
+/* FullCalendar embeds this font as data:, which the app CSP intentionally excludes. */
+@font-face {
+  font-family: 'ita-calendar-icons';
+  src: url('/fonts/fullcalendar-icons.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+.fc .fc-icon {
+  font-family: 'ita-calendar-icons' !important;
 }

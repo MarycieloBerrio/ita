@@ -48,7 +48,7 @@ export function PriceCell({ service, owner }: { service: Service; owner: boolean
     <div>
       <div className="inline-price">
         <label>
-          <span className="sr-only">Tarifa COP de {service.name}</span>
+          <span className="sr-only">Tarifa de {service.name}</span>
           <input
             inputMode="numeric"
             value={price}
@@ -245,7 +245,7 @@ export default function CatalogPage() {
                     <tr>
                       <th>Servicio</th>
                       <th>Ficha / duración</th>
-                      <th>Precio · COP</th>
+                      <th>Precio</th>
                       {owner ? <th>Administrar</th> : null}
                     </tr>
                   </thead>

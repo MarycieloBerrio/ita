@@ -15,7 +15,6 @@ export default function AccountCard({ detail }: { detail: VisitDetail }) {
     <aside className="card sticky-card stack">
       <div className="section-title">
         <h2>Cuenta de la visita</h2>
-        <span className="badge badge-rose">COP</span>
       </div>
       <div>
         {detail.services.map((s) => (

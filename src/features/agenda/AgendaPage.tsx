@@ -104,7 +104,6 @@ export default function AgendaPage() {
             <Cake size={17} />
             Mostrar cumpleaños
           </label>
-          <span className="muted small">Hora de Colombia · Bogotá</span>
         </div>
         {q.isPending && <p role="status">Cargando citas…</p>}
         {q.error && <ErrorState error={q.error} />}

@@ -34,27 +34,6 @@ function OwnerSettings() {
         </div>
       </header>
       <QueryFeedback pending={request.isPending} error={request.error} retry={request.refetch} />
-      <section className="card">
-        <h2>Configuración regional</h2>
-        <div className="operation-summary">
-          <div>
-            <span>País</span>
-            <strong>Colombia</strong>
-          </div>
-          <div>
-            <span>Moneda</span>
-            <strong>COP</strong>
-          </div>
-          <div>
-            <span>Zona horaria</span>
-            <strong style={{ fontSize: '1.1rem' }}>America/Bogota</strong>
-          </div>
-        </div>
-        <p className="muted">
-          Operación con conexión a Internet. Fechas de agenda, cobros y cierre corresponden a
-          Bogotá.
-        </p>
-      </section>
       {request.data ? (
         <>
           <PaymentMethods methods={request.data.payment_methods} />
@@ -207,9 +186,7 @@ export default function SettingsPage() {
           Gestiona tus citas, fichas y cobros desde tu cuenta personal. Para cambiar nombre o
           recuperar acceso, contacta a la dueña.
         </p>
-        <p className="muted">
-          Colombia · COP · America/Bogota. La aplicación requiere conexión a Internet.
-        </p>
+        <p className="muted">La aplicación requiere conexión a Internet.</p>
       </section>
     </div>
   );

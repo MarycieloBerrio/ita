@@ -202,9 +202,7 @@ export default function AppointmentEditor({
           </ActionButton>
         )}
       </div>
-      <p className="small muted">
-        Las horas se guardan en America/Bogota. No se envían recordatorios de citas.
-      </p>
+      <p className="small muted">No se envían recordatorios de citas.</p>
     </form>
   );
 }

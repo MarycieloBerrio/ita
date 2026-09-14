@@ -30,8 +30,8 @@ test('dueña configura producto, registra stock, vende y cobra abonos sin duplic
   await editor
     .getByRole('combobox', { name: 'Categoría', exact: true })
     .selectOption({ label: 'Tratamientos ficticios' });
-  await editor.getByLabel('Precio de venta · COP').fill('15000');
-  await editor.getByLabel('Costo por unidad · COP').fill('7000');
+  await editor.getByLabel('Precio de venta').fill('15000');
+  await editor.getByLabel('Costo por unidad').fill('7000');
   await editor.getByRole('button', { name: 'Guardar producto' }).click();
   await expect(page.getByRole('cell', { name: /Mascarilla ficticia/ })).toBeVisible();
   await page.getByRole('button', { name: 'Movimiento', exact: true }).click();
@@ -69,7 +69,7 @@ test('dueña configura producto, registra stock, vende y cobra abonos sin duplic
     .toBe(1);
   for (const amount of ['10000', '20000']) {
     await page.getByRole('button', { name: 'Registrar pago completo o parcial' }).click();
-    await page.getByLabel('Importe · COP', { exact: true }).fill(amount);
+    await page.getByLabel('Importe', { exact: true }).fill(amount);
     await page
       .getByRole('combobox', { name: 'Método', exact: true })
       .selectOption({ label: 'Efectivo ficticio' });
@@ -113,7 +113,7 @@ test('trabajadora consulta catálogo y existencias sin recibir costos ni modific
   await page.getByRole('link', { name: 'Inventario', exact: true }).click();
   await expect(page.getByRole('cell', { name: /Producto ficticio/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Registrar movimiento' })).toHaveCount(0);
-  await expect(page.getByRole('columnheader', { name: 'Costo · COP' })).toHaveCount(0);
+  await expect(page.getByRole('columnheader', { name: 'Costo' })).toHaveCount(0);
   expect(
     (await sql.query<QueryResults['inventory']>('worker', 'inventory')).products[0],
   ).not.toHaveProperty('cost');
@@ -193,7 +193,7 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
   await page.getByRole('link', { name: 'Finanzas', exact: true }).click();
   await page.locator('summary').filter({ hasText: 'Pagos y rectificaciones' }).click();
   await page.getByRole('button', { name: 'Rectificar error', exact: true }).click();
-  await page.getByLabel('Importe · COP', { exact: true }).fill('9000');
+  await page.getByLabel('Importe', { exact: true }).fill('9000');
   await page.getByLabel('Motivo de la rectificación').fill('Error al digitar importe');
   await page.getByRole('button', { name: 'Confirmar rectificación', exact: true }).click();
   await expect
@@ -202,9 +202,9 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
     )
     .toBe(9000);
   await page.getByRole('button', { name: 'Caja de efectivo', exact: true }).click();
-  await page.getByLabel('Efectivo de apertura · COP', { exact: true }).fill('10000');
+  await page.getByLabel('Efectivo de apertura', { exact: true }).fill('10000');
   await page.getByRole('button', { name: 'Confirmar apertura' }).click();
-  await page.getByLabel('Importe · COP', { exact: true }).fill('3000');
+  await page.getByLabel('Importe', { exact: true }).fill('3000');
   await page.getByLabel('Motivo', { exact: true }).fill('Aporte ficticio de cambio');
   await page.getByRole('button', { name: 'Registrar aporte' }).click();
   await expect
@@ -220,7 +220,7 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
     .filter({ has: page.getByRole('heading', { name: 'Registrar egreso pagado', exact: true }) });
   await expense.getByLabel('Concepto', { exact: true }).fill('Compra ficticia de aseo');
   await expense.getByLabel('Categoría de gasto').fill('Aseo');
-  await expense.getByLabel('Importe pagado · COP').fill('2000');
+  await expense.getByLabel('Importe pagado').fill('2000');
   await expense.getByRole('combobox', { name: 'Método', exact: true }).selectOption(method.id);
   await expense
     .getByRole('combobox', { name: 'Compra recibida relacionada · opcional', exact: true })
@@ -233,7 +233,7 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
           .expected_amount,
     )
     .toBe(11000);
-  await page.getByLabel('Efectivo contado · COP').fill('11000');
+  await page.getByLabel('Efectivo contado').fill('11000');
   await page.getByRole('button', { name: 'Confirmar cierre' }).click();
   const report = await sql.query<QueryResults['finance']>('owner', 'finance');
   expect(report.totals.collected).toBe(9000);

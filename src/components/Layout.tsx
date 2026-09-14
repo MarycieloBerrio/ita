@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { PendingOperationsBanner } from './PendingOperationsBanner';
+import BrandLogo from './BrandLogo';
 const navigation = [
   { to: '/', label: 'Inicio', icon: Home },
   { to: '/clientas', label: 'Clientas', icon: UsersRound },
@@ -34,7 +35,7 @@ export default function Layout() {
       </a>
       <aside className={`sidebar ${open ? 'is-open' : ''}`}>
         <NavLink to="/" className="wordmark">
-          ita<span>ESTUDIO DE BELLEZA</span>
+          <BrandLogo />
         </NavLink>
         <p className="nav-caption">TU SALÓN</p>
         <nav aria-label="Navegación principal">
@@ -114,7 +115,7 @@ export default function Layout() {
           <Outlet />
         </main>
         <footer className="app-footer">
-          ita <span>Hecho con cuidado · America/Bogota</span>
+          ita <span>Hecho con cuidado</span>
         </footer>
       </div>
     </div>
