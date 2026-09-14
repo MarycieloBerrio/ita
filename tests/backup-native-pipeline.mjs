@@ -9,7 +9,7 @@ import { executeNativeDump } from '../scripts/backup-native.mjs';
 const db = await createNativeDatabase();
 try {
   await db.exec(
-    'create schema auth; create table auth.users(id uuid primary key, encrypted_password text, label text)',
+    'create schema auth; create table auth.users(id uuid primary key, encrypted_password text, label text); create table public.backup_probe(id integer primary key)',
   );
   await db.query(
     "insert into auth.users values('00000000-0000-4000-8000-000000000001','fictional-hash-only','Ficticia: Bogotá')",
@@ -24,7 +24,7 @@ try {
         `postgresql://ita_test:fixture_only@127.0.0.1:55433/${db.name}`,
         '--dry-run',
         '--schema',
-        'auth',
+        'auth,public',
         ...(data ? ['--data-only', '--use-copy'] : []),
       ]);
       assert.equal((script.match(/--role "postgres"/g) ?? []).length, 1);
@@ -35,7 +35,12 @@ try {
       assert.ok((await stat(output)).size > 0);
       const sql = await readFile(output, 'utf8');
       if (data) assert.ok(sql.includes('Ficticia: Bogotá') && sql.includes('fictional-hash-only'));
-      else assert.ok(sql.includes('CREATE TABLE') && sql.includes('encrypted_password'));
+      else
+        assert.ok(
+          sql.includes('CREATE TABLE') &&
+            sql.includes('encrypted_password') &&
+            sql.includes('backup_probe'),
+        );
     }
   });
   console.log(

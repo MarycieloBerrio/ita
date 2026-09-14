@@ -50,8 +50,14 @@ export async function executeNativeDump(script, output, { execute = run, env = p
   childEnv.PGCONNECT_TIMEOUT = '15';
   childEnv.PGOPTIONS = '-c statement_timeout=600000';
   await execute(env.ITA_BASH_BIN, ['--noprofile', '--norc', '-s'], {
-    // CLI 2.117 emits the abbreviated singular flag. Windows pg_dump requires its full spelling.
-    input: script.replace(/--quote-all-identifier(?=\s|$)/g, '--quote-all-identifiers'),
+    // CLI 2.117 emits an abbreviated flag and an unquoted schema alternation.
+    // Quote only simple schema identifiers so Bash cannot interpret their pipes.
+    input: script
+      .replace(/--quote-all-identifier(?=\s|$)/g, '--quote-all-identifiers')
+      .replace(
+        /--schema=([a-zA-Z_][a-zA-Z0-9_]*(?:\|[a-zA-Z_][a-zA-Z0-9_]*)+)(?=\s|$)/g,
+        "--schema='$1'",
+      ),
     output,
     env: childEnv,
   });
@@ -68,12 +74,16 @@ export async function createLinkedNativeBackup(output, recoveryKey) {
     for (const [file, ...flags] of NATIVE_DUMPS) {
       // --dry-run may initialise Supabase's temporary login role. It never dumps data itself.
       // run captures stdout in memory and suppresses stderr. Never print or persist this script.
-      const script = await run(
-        process.execPath,
-        [cli, 'db', 'dump', '--linked', '--dry-run', ...flags],
-        { cwd: root },
-      );
-      await executeNativeDump(`${script}\n`, join(directory, file));
+      try {
+        const script = await run(
+          process.execPath,
+          [cli, 'db', 'dump', '--linked', '--dry-run', ...flags],
+          { cwd: root },
+        );
+        await executeNativeDump(`${script}\n`, join(directory, file));
+      } catch {
+        throw new Error(`NATIVE_DUMP_FAILED_${file.replace('.', '_')}`);
+      }
     }
     const files = {};
     for (const name of SQL_FILES)

@@ -1,6 +1,6 @@
 # Respaldo y recuperación de ita
 
-Estado: implementación local verificada; proceso remoto desactivado hasta configurar secretos, medir cuotas y completar la recuperación con Supabase Auth. No comenzar a guardar datos reales antes de cerrar estos pendientes. El repositorio se mantiene **público por decisión expresa de su titular**, que sustituye la propuesta privada del plan. Solo se publica el archivo cifrado; hay que considerar que terceros pueden obtenerlo. Su confidencialidad depende de una clave aleatoria fuerte y de su custodia separada.
+Estado: copia hospedada y recuperación PostgreSQL/Auth local verificadas; proceso diario desactivado hasta configurar secretos, medir cuotas y comprobar subida/descarga. No comenzar a guardar datos reales antes de cerrar estos pendientes. El repositorio se mantiene **público por decisión expresa de su titular**, que sustituye la propuesta privada del plan. Solo se publica el archivo cifrado; hay que considerar que terceros pueden obtenerlo. Su confidencialidad depende de una clave aleatoria fuerte y de su custodia separada.
 
 ## Qué conserva
 
@@ -12,7 +12,7 @@ El respaldo de base no incluye configuración del proveedor: URL de acceso/redir
 
 ## Activación bajo control de la dueña
 
-Responsable técnico: **pendiente de designar**. Supervisión propuesta: dueña; confirmación pendiente. Medio independiente y frecuencia de copia externa: **pendientes de acordar**, utilizando recursos gratuitos existentes. La clave de recuperación debe quedar bajo control de la dueña, separada de GitHub y del archivo cifrado; comprobar que otra persona autorizada puede recuperarla en caso de ausencia del soporte. No enviar claves por conversaciones, correo ni documentación del repositorio.
+Responsable técnico: **la titular que solicita el desarrollo**, confirmado el 14 de septiembre de 2026. Destino independiente: **memoria USB**, confirmado en la misma fecha; frecuencia de copia externa pendiente. La clave de recuperación debe conservarse separada de GitHub y del archivo cifrado; comprobar que otra persona autorizada puede recuperarla en caso de ausencia del soporte. No enviar claves por conversaciones, correo ni documentación del repositorio. La carpeta temporal de Windows usada para entregar la clave no sustituye su custodia permanente.
 
 En Settings → Secrets and variables → Actions, configurar:
 
@@ -61,4 +61,18 @@ Ejecutado el 12 de septiembre y repetida la recuperación nativa el 13 de septie
 - `npx vitest run tests/backup.test.mjs`: **10 pruebas aprobadas**; retorno exacto de Unicode/binarios, clave incorrecta, alteración de datos/encabezado/tag, truncamiento, protección de archivos existentes, tamaño de descompresión, destino separado y retención/cuotas.
 - `node tests/backup-restore.mjs`, con `ITA_TEST_DATABASE_URL` apuntando al clúster PostgreSQL **17.4 local** y `ITA_PG_BIN` a sus binarios: **recuperación aprobada**, 23 tablas de aplicación idénticas, historial de migraciones, dos identidades/RLS; cuenta de $230.000, abono de $100.000 y saldo de $130.000, stock de 2 unidades, agenda de trabajadora privada y cumpleaños del 29 de febrero. Origen y destino se crearon y eliminaron exclusivamente en el clúster local desechable. Artefacto de muestra: aproximadamente 26 KB.
 
-La prueba nativa usa `pg_dump` y el script real de descifrado/restauración; su tabla local `auth.users` es un soporte de prueba de UUID/RLS. **No equivale a probar contraseñas, sesiones ni recuperación HTTP de Supabase Auth**. Pendiente ejecutar el volcado CLI en el proveedor, subida/descarga de GitHub, medición con volumen representativo, restauración de Auth completo y configuración/custodia con la persona responsable. No se ha activado el workflow remoto desde este desarrollo.
+La prueba ficticia anterior usa `pg_dump` y el script real de descifrado/restauración; su tabla local `auth.users` es un soporte de prueba de UUID/RLS. **No equivale a probar contraseñas, sesiones ni recuperación HTTP de Supabase Auth**.
+
+El 14 de septiembre se generó además una copia del proyecto hospedado mediante `scripts/backup-native.mjs`: **61.528 bytes cifrados**. Se restauró con `scripts/restore.mjs` en una base local vacía y aislada. La comparación de COPY normalizada a UTC verificó **45 tablas y 181 filas idénticas**, cuatro migraciones de la aplicación, RLS en las 23 tablas privadas, perfiles de ambas cuentas y correspondencia de sus contraseñas con los hashes restaurados. No se imprimieron credenciales ni filas. La CLI excluye el contenido de `auth.schema_migrations`: el destino de operación necesita una plataforma Auth compatible, con su historial administrado.
+
+La copia manual incluye expresamente el esquema Auth, a diferencia del flujo programado oficial que lo espera del destino. Requiere `ITA_PG_BIN` y `ITA_BASH_BIN`; las credenciales temporales generadas por la CLI se entregan a Bash por entrada estándar y no se guardan. La CLI 2.117.0 emite una alternancia de esquemas sin comillas; el adaptador la protege para que Bash no interprete `auth|public|ita_private` como comandos. Esta corrección se comprueba con una prueba de ejecución nativa y otra de regresión.
+
+Pendiente: subida/descarga de GitHub, medición con volumen representativo, activación de los secretos de conexión/cifrado y comprobación del proceso diario. No se ha activado el workflow remoto. El paquete para USB está preparado localmente; aún no se ha verificado su copia a una memoria física.
+
+## Acceso Auth recuperado: prueba del 14 de septiembre
+
+Se ejecutó Supabase Auth **v2.196.0**, la misma versión anunciada por `/auth/v1/health` del proyecto, contra la copia PostgreSQL restaurada. **17 comprobaciones aprobaron**: contraseña conservada y login HTTP de ambas cuentas, firma del JWT, UUID/perfil restaurado, denegación `42501` de finanzas para trabajadora, enlace de recuperación administrativo sin enviar correo, verificación del enlace, cambio de contraseña en el destino local, nuevo login y cierre de sesión. La prueba no cambió contraseñas ni configuración del proyecto hospedado.
+
+El ejecutable se compiló desde la etiqueta oficial con Go 1.27.1. Para Windows solo se sustituyó el listener con `SO_REUSEPORT` (Unix) por `net.ListenConfig{}`; la lógica de autenticación y las migraciones no se modificaron. Se inició con el subcomando `serve` sobre el esquema ya restaurado, conexión con `search_path=auth`, JWT de prueba generado en memoria, correo saliente sin configurar y puerto aleatorio limitado a `127.0.0.1`. El proceso se cerró al terminar. No se afirma haber probado una migración futura de versión ni una recuperación sobre otro proyecto hospedado.
+
+Comprobador reproducible: `node tests/restore-auth-http.mjs`. Solo admite una base local `ita_restore_…` confirmada por `ITA_RESTORE_DATABASE`, con la URL en `ITA_RESTORE_DATABASE_URL`. Requiere `ITA_AUTH_TEST_BINARY` apuntando al binario compatible y `ITA_RESTORE_ACCOUNTS_FILE` apuntando al archivo privado de las dos cuentas (objeto `cuentas`, campos `rol`, `correo`, `contraseña`; roles `Dueña` y `Trabajadora`). `ITA_AUTH_RESTORE_REPORT` permite guardar el resultado sin datos personales. **Usar una restauración nueva para cada ejecución**: la prueba cambia las contraseñas únicamente en esa copia local. Nunca guardar el archivo de cuentas, SQL, binarios del proveedor o claves en Git. El workflow de CI no recibe estas cuentas.

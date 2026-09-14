@@ -55,6 +55,21 @@ describe('native backup execution boundary', () => {
     );
   });
 
+  it('protects the CLI multi-schema expression from being interpreted as shell pipelines', async () => {
+    let input;
+    await executeNativeDump(
+      script.replace('--schema-only', '--schema-only --schema=auth|public|ita_private'),
+      'unused',
+      {
+        env: { ITA_BASH_BIN: '/bin/bash', ITA_PG_BIN: '/pg/bin' },
+        execute: async (_command, _args, options) => {
+          input = options.input;
+        },
+      },
+    );
+    expect(input).toContain("--schema='auth|public|ita_private'");
+  });
+
   it('requires encrypted PostgreSQL transport for a hosted source', async () => {
     let settings;
     await executeNativeDump(script.replace('127.0.0.1', 'db.example.supabase.co'), 'unused', {

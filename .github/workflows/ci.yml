@@ -27,6 +27,7 @@ jobs:
       PGPASSWORD: ita_ci_fictional_only
       ITA_TEST_DATABASE_URL: postgresql://ita_test:ita_ci_fictional_only@127.0.0.1:55433/postgres
       ITA_PG_BIN: /usr/lib/postgresql/17/bin
+      ITA_BASH_BIN: /bin/bash
     services:
       postgres:
         image: postgres:17.11-bookworm
@@ -71,6 +72,8 @@ jobs:
         run: npm run test:db:native
       - name: Restaurar copia cifrada en otra base local
         run: npm run test:restore
+      - name: Ejecutar volcado CLI con varios esquemas y herramientas nativas
+        run: node tests/backup-native-pipeline.mjs
       - name: Instalar Chromium de la versión bloqueada de Playwright
         run: npx --no-install playwright install --with-deps chromium
       - name: Recorridos de navegador con SQL real y Auth ficticio
