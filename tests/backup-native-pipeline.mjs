@@ -14,6 +14,8 @@ try {
   await db.query(
     "insert into auth.users values('00000000-0000-4000-8000-000000000001','fictional-hash-only','Ficticia: Bogotá')",
   );
+  const sourceUrl = new URL(`postgresql://ita_test@127.0.0.1:55433/${db.name}`);
+  sourceUrl.password = process.env.PGPASSWORD || 'fixture_only';
   await temporaryWork(async (directory) => {
     for (const data of [false, true]) {
       const script = await run(process.execPath, [
@@ -21,7 +23,7 @@ try {
         'db',
         'dump',
         '--db-url',
-        `postgresql://ita_test:fixture_only@127.0.0.1:55433/${db.name}`,
+        sourceUrl.toString(),
         '--dry-run',
         '--schema',
         'auth,public',
