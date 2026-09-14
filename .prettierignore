@@ -1,0 +1,8 @@
+node_modules
+dist
+.local
+package-lock.json
+supabase
+playwright-report
+test-results
+backups

@@ -1,0 +1,65 @@
+name: Respaldo cifrado de ita
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:23 America/Bogota. GitHub puede retrasar u omitir ejecuciones.
+    - cron: '23 8 * * *'
+
+permissions:
+  contents: read
+  actions: write # Inventario/rotación de artefactos; no escritura de código.
+
+concurrency:
+  group: ita-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Activación explícita tras medir cuotas, custodiar clave y probar recuperación.
+    # El repositorio permanece público por decisión de su titular. Solo se sube ciphertext.
+    if: vars.ITA_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.20.0'
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: 2.117.0
+      - name: Marcar ejecución iniciada
+        run: node scripts/backup.mjs status running
+        env:
+          ITA_BACKUP_DATABASE_URL: ${{ secrets.ITA_BACKUP_DATABASE_URL }}
+      - name: Exportar, comprimir, cifrar y validar cuota
+        id: backup
+        run: node scripts/backup.mjs create
+        env:
+          ITA_BACKUP_DATABASE_URL: ${{ secrets.ITA_BACKUP_DATABASE_URL }}
+          ITA_BACKUP_RECOVERY_KEY: ${{ secrets.ITA_BACKUP_RECOVERY_KEY }}
+          ITA_BACKUP_BUDGET_BYTES: ${{ vars.ITA_BACKUP_BUDGET_BYTES }}
+          ITA_OTHER_ACTIONS_STORAGE_BYTES: ${{ vars.ITA_OTHER_ACTIONS_STORAGE_BYTES }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Subir únicamente copia cifrada
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.backup.outputs.name }}
+          path: ${{ steps.backup.outputs.path }}
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Confirmar copia almacenada
+        run: node scripts/backup.mjs status success
+        env:
+          ITA_BACKUP_DATABASE_URL: ${{ secrets.ITA_BACKUP_DATABASE_URL }}
+          ITA_BACKUP_ARTIFACT_NAME: ${{ steps.backup.outputs.name }}
+          ITA_BACKUP_BYTES: ${{ steps.backup.outputs.bytes }}
+      - name: Registrar fallo sin datos sensibles
+        if: failure()
+        run: node scripts/backup.mjs status failed
+        env:
+          ITA_BACKUP_DATABASE_URL: ${{ secrets.ITA_BACKUP_DATABASE_URL }}

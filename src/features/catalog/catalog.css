@@ -1,0 +1,75 @@
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+.category-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border, #e9e3df);
+}
+.inline-price {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.inline-price input {
+  width: 8rem;
+}
+.operations-filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.operations-filters .field {
+  flex: 1;
+  min-width: 170px;
+}
+.operation-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+.operation-summary strong {
+  display: block;
+  font-size: 1.5rem;
+  margin-top: 0.5rem;
+}
+.operation-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.finance-detail {
+  overflow-x: auto;
+}
+.finance-detail summary {
+  cursor: pointer;
+  padding: 1rem 0;
+  font-weight: 600;
+}
+.sales-line {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 110px auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+@media (max-width: 620px) {
+  .category-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .sales-line {
+    grid-template-columns: 1fr 100px;
+  }
+  .sales-line .button-danger {
+    grid-column: 1 / -1;
+  }
+}
