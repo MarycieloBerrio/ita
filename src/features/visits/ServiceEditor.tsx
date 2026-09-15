@@ -19,13 +19,32 @@ export default function ServiceEditor({
   const { profile } = useAuth();
   const state = useTechnicalDraft(service);
   const [completionErrors, setCompletionErrors] = useState<string[]>([]);
-  const [correction, setCorrection] = useState(false);
+  const [correctionVersion, setCorrectionVersion] = useState<number | null>(null);
+  const correction = correctionVersion !== null;
   const [reason, setReason] = useState('');
   const [mapPending, setMapPending] = useState(false);
   const unsaved = state.dirty || mapPending;
   const completed = service.status === 'completed';
   const canEdit = !completed || correction;
   const firstValuation = completed && service.price === null;
+  useEffect(() => {
+    // Also handles a save confirmed later through the pending-operation banner.
+    // Never close over changes made while the previous request was in flight.
+    if (
+      correctionVersion === null ||
+      state.version <= correctionVersion ||
+      !state.saved ||
+      state.busy ||
+      state.error ||
+      unsaved
+    )
+      return;
+    const timer = setTimeout(() => {
+      setCorrectionVersion(null);
+      setReason('');
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [correctionVersion, state.version, state.saved, state.busy, state.error, unsaved]);
   useEffect(() => {
     onDirty(unsaved || state.busy);
   }, [unsaved, state.busy, onDirty]);
@@ -85,7 +104,10 @@ export default function ServiceEditor({
         <div className="notice">
           Trabajo técnico finalizado.
           {profile?.role === 'owner' && (
-            <button className="button-secondary" onClick={() => setCorrection(true)}>
+            <button
+              className="button-secondary"
+              onClick={() => setCorrectionVersion(state.version)}
+            >
               Corregir ficha
             </button>
           )}
@@ -178,7 +200,13 @@ export default function ServiceEditor({
         {(canEdit || firstValuation) && (
           <button
             className="button-secondary"
-            disabled={state.busy || state.invalid || mapPending || (correction && !reason.trim())}
+            disabled={
+              state.busy ||
+              state.invalid ||
+              mapPending ||
+              (!state.dirty && !state.error) ||
+              (correction && !reason.trim())
+            }
             onClick={() => void state.save(false, reason)}
           >
             {state.error ? 'Reintentar guardado' : 'Guardar ficha'}

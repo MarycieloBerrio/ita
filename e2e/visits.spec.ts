@@ -140,3 +140,56 @@ test('agenda usa Bogotá con dispositivo de otra zona y oculta citas ajenas', as
   await expect(page.getByLabel('Notas')).toHaveValue('Solo trabajadora');
   await expect(page.getByLabel('Inicio')).toHaveValue(`${date}T10:00`);
 });
+
+test('corregir una ficha finalizada vuelve a lectura y conserva la corrección al recargar', async ({
+  page,
+  sql,
+}) => {
+  const category = await sql.command<CommandResult>('owner', 'category.save', {
+    kind: 'service',
+    name: 'Correcciones ficticias',
+  });
+  const catalog = await sql.command<CommandResult>('owner', 'service.save', {
+    category_id: category.id,
+    name: 'General para corregir',
+    form_type: 'general',
+    price_mode: 'fixed',
+    fixed_price: 30000,
+    duration_minutes: 30,
+  });
+  const client = await sql.command<CommandResult>('owner', 'client.save', {
+    name: 'Clienta ficticia de corrección',
+  });
+  const visit = await sql.command<CommandResult>('owner', 'visit.create', {
+    client_id: client.id,
+    service_ids: [catalog.id],
+  });
+  const initial = await sql.query<QueryResults['visit']>('owner', 'visit', { id: visit.id });
+  const service = initial.services[0];
+  await sql.command('owner', 'service_record.save', {
+    id: service.id,
+    version: service.version,
+    technical: service.technical,
+    status: 'completed',
+  });
+  await sql.login(page, 'owner');
+  await page.goto(`/visitas/${visit.id}`);
+  await page.getByRole('button', { name: 'Corregir ficha' }).click();
+  await page.getByLabel('Motivo de la corrección').fill('Corregir observaciones');
+  await page.getByLabel('Observaciones (opcional)').fill('Observación corregida y confirmada');
+  await page.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Corregir ficha' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Guardar ficha', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Motivo de la corrección')).toHaveCount(0);
+  await expect(page.getByLabel('Observaciones (opcional)')).toBeDisabled();
+  const saved = await sql.query<QueryResults['visit']>('owner', 'visit', { id: visit.id });
+  expect(saved.services[0].technical.notes).toBe('Observación corregida y confirmada');
+  await page.reload();
+  await expect(page.getByLabel('Observaciones (opcional)')).toHaveValue(
+    'Observación corregida y confirmada',
+  );
+  await expect(page.getByLabel('Observaciones (opcional)')).toBeDisabled();
+  await page.getByRole('button', { name: 'Corregir ficha' }).click();
+  await expect(page.getByLabel('Motivo de la corrección')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Guardar ficha', exact: true })).toBeDisabled();
+});
