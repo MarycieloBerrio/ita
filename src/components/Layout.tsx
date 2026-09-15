@@ -35,7 +35,7 @@ export default function Layout() {
       </a>
       <aside className={`sidebar ${open ? 'is-open' : ''}`}>
         <NavLink to="/" className="wordmark">
-          <BrandLogo />
+          <BrandLogo tone="forest" />
         </NavLink>
         <p className="nav-caption">TU SALÓN</p>
         <nav aria-label="Navegación principal">
