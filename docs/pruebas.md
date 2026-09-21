@@ -48,7 +48,6 @@ npx --no-install playwright install chromium
 $env:PLAYWRIGHT_CHANNEL = 'chromium'
 $env:VITE_SUPABASE_URL = 'https://mrnzvgivfjivuobpgens.supabase.co'
 $env:VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test'
-$env:VITE_APP_ENV = 'pilot'
 npm run test:e2e
 ```
 

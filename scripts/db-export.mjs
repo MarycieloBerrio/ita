@@ -27,6 +27,7 @@ export async function verifyExports(db, { owner, worker, color }) {
   await db.exec('set role authenticated');
   const client = await cmd('client.save', {
     name: 'Clienta integral ficticia',
+    consent: 'client-notice-v1',
     notes: '</script><img src=x> · fórmula libre “8/31”',
   });
   await db.exec('reset role');

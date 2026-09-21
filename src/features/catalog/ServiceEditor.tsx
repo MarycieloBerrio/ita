@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -81,7 +82,13 @@ export default function ServiceEditor({
         Cada opción cobrable tiene su propia ficha y tarifa. Los cambios se aplican a nuevas
         selecciones.
       </p>
-      <form className="stack" onSubmit={(event) => void form.handleSubmit(save)(event)}>
+      <EditorForm
+        busy={operation.pending}
+        dirty={form.formState.isDirty}
+        onChangeCapture={operation.clear}
+        className="stack"
+        onSubmit={(event) => void form.handleSubmit(save)(event)}
+      >
         <div className="form-grid">
           <label className="field">
             Nombre
@@ -171,12 +178,12 @@ export default function ServiceEditor({
           <button className="button" disabled={operation.pending}>
             {operation.pending ? 'Guardando…' : 'Guardar servicio'}
           </button>
-          <button className="button-secondary" type="button" onClick={onClose}>
+          <button className="button-secondary" type="button" data-editor-close onClick={onClose}>
             Cerrar editor
           </button>
           {form.formState.isDirty ? <span className="badge">Cambios pendientes</span> : null}
         </div>
-      </form>
+      </EditorForm>
     </section>
   );
 }

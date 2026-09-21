@@ -27,10 +27,12 @@ export default function Dialog({
       }}
       onCancel={(e) => {
         e.preventDefault();
-        if (
-          !changed.current ||
-          window.confirm('Hay cambios sin confirmar. ¿Cerrar este formulario?')
-        )
+        if (ref.current?.querySelector('[aria-busy="true"]')) return;
+        const editor = ref.current?.querySelector('[data-editor-dirty]');
+        const dirty = editor
+          ? editor.getAttribute('data-editor-dirty') === 'true'
+          : changed.current;
+        if (!dirty || window.confirm('Hay cambios sin confirmar. ¿Cerrar este formulario?'))
           onClose();
       }}
     >

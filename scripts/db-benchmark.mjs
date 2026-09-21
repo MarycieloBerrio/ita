@@ -23,7 +23,7 @@ try {
     [service, category],
   );
   await db.query(
-    "insert into ita_private.clients(id,name,phone,created_by) select md5('ita-bench-client-'||g)::uuid,'Clienta ficticia '||lpad(g::text,4,'0'),'300'||lpad(g::text,7,'0'),$1 from generate_series(1,2000) g",
+    "insert into ita_private.clients(id,name,phone,consent,created_by) select md5('ita-bench-client-'||g)::uuid,'Clienta ficticia '||lpad(g::text,4,'0'),'300'||lpad(g::text,7,'0'),'client-notice-v1',$1 from generate_series(1,2000) g",
     [owner],
   );
   await db.query(

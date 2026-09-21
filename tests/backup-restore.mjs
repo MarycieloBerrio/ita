@@ -55,6 +55,9 @@ try {
     "insert into ita_private.profiles(id,display_name,role) values($1,'Dueña ficticia','owner'),($2,'Trabajadora ficticia','worker')",
     [owner, worker],
   );
+  await source.query(
+    "update ita_private.settings set responsible_name='Salón de prueba',responsible_contact='contacto@example.invalid / 3000000000'",
+  );
   await source.query("select set_config('request.jwt.claim.sub',$1,false)", [owner]);
   await source.query('set role authenticated');
   const command = async (action, payload) =>
@@ -74,6 +77,7 @@ try {
     ).rows[0].result;
   const client = await command('client.save', {
     name: 'Clienta de recuperación ficticia',
+    consent: 'client-notice-v1',
     birth_day: 29,
     birth_month: 2,
   });

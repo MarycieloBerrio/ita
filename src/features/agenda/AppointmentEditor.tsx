@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -70,7 +71,13 @@ export default function AppointmentEditor({
     if (r) onClose();
   });
   return (
-    <form className="stack" onSubmit={(e) => void submit(e)}>
+    <EditorForm
+      busy={operation.pending}
+      dirty={isDirty}
+      onChangeCapture={operation.clear}
+      className="stack"
+      onSubmit={(e) => void submit(e)}
+    >
       <div className="section-title">
         <h2>{appointment ? 'Detalle de cita' : 'Nueva cita'}</h2>
         <button
@@ -203,6 +210,6 @@ export default function AppointmentEditor({
         )}
       </div>
       <p className="small muted">No se envían recordatorios de citas.</p>
-    </form>
+    </EditorForm>
   );
 }

@@ -11,8 +11,9 @@ import {
   Wifi,
   WifiOff,
   Menu,
+  X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { PendingOperationsBanner } from './PendingOperationsBanner';
 import BrandLogo from './BrandLogo';
@@ -28,15 +29,67 @@ const navigation = [
 export default function Layout() {
   const { profile, signOut, online, error, refresh } = useAuth();
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const sidebar = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const media = window.matchMedia('(max-width: 1024px)');
+    const previousOverflow = document.body.style.overflow;
+    if (media.matches) document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!media.matches) return;
+      if (event.key === 'Escape') {
+        setOpen(false);
+        menuButton.current?.focus();
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = sidebar.current?.querySelectorAll<HTMLElement>('a, button:not(:disabled)');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const onMediaChange = () => setOpen(false);
+    document.addEventListener('keydown', onKeyDown);
+    media.addEventListener('change', onMediaChange);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      media.removeEventListener('change', onMediaChange);
+    };
+  }, [open]);
+
+  const closeMenu = () => {
+    setOpen(false);
+    menuButton.current?.focus();
+  };
   return (
     <div className="app-shell">
       <a href="#main" className="skip-link">
         Saltar al contenido
       </a>
-      <aside className={`sidebar ${open ? 'is-open' : ''}`}>
-        <NavLink to="/" className="wordmark">
-          <BrandLogo tone="forest" />
-        </NavLink>
+      <aside id="main-sidebar" ref={sidebar} className={`sidebar ${open ? 'is-open' : ''}`}>
+        <div className="sidebar-header">
+          <NavLink to="/" className="wordmark" onClick={() => setOpen(false)}>
+            <BrandLogo tone="forest" />
+          </NavLink>
+          <button
+            ref={closeButton}
+            className="icon-button sidebar-close"
+            aria-label="Cerrar menú"
+            onClick={closeMenu}
+          >
+            <X size={22} />
+          </button>
+        </div>
         <p className="nav-caption">TU SALÓN</p>
         <nav aria-label="Navegación principal">
           {navigation
@@ -72,20 +125,32 @@ export default function Layout() {
           </button>
         </div>
       </aside>
+      {open && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label="Cerrar menú"
+          tabIndex={-1}
+          onClick={closeMenu}
+        />
+      )}
       <div className="workspace">
         <header className="topbar">
           <button
             className="icon-button mobile-menu"
-            aria-label="Abrir menú"
-            onClick={() => setOpen(!open)}
+            aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={open}
+            aria-controls="main-sidebar"
+            ref={menuButton}
+            onClick={() => {
+              setOpen(!open);
+              if (!open) requestAnimationFrame(() => closeButton.current?.focus());
+            }}
           >
             <Menu />
           </button>
           <span>Tu salón, en armonía.</span>
           <div className="topbar-right">
-            {import.meta.env.VITE_APP_ENV !== 'production' && (
-              <span className="pilot-badge">PILOTO · DATOS DE PRUEBA</span>
-            )}
             <span className="connection">
               {online ? <Wifi size={15} /> : <WifiOff size={15} />}
               <span>{online ? 'En línea' : 'Sin conexión'}</span>

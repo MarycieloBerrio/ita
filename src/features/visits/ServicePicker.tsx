@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EditorForm from '../../components/EditorForm';
 import { useTypedQuery } from '../../lib/api';
 import { useOperation } from '../../lib/useOperation';
 import { money } from '../../lib/format';
@@ -23,10 +24,21 @@ export default function ServicePicker({ visit, onClose }: { visit: Visit; onClos
     .reduce((sum, s) => sum + (s.fixed_price ?? 0), 0);
   const pending = list.filter((s) => selected.includes(s.id) && s.price_mode === 'custom').length;
   return (
-    <div className="stack">
+    <EditorForm
+      className="stack"
+      busy={operation.pending}
+      dirty={selected.length > 0 || notes !== '' || !materials.none}
+      onSubmit={(event) => event.preventDefault()}
+    >
       <div className="section-title">
         <h2>Añadir servicios</h2>
-        <button className="icon-button" aria-label="Cerrar selección" onClick={onClose}>
+        <button
+          type="button"
+          data-editor-close
+          className="icon-button"
+          aria-label="Cerrar selección"
+          onClick={onClose}
+        >
           ×
         </button>
       </div>
@@ -125,6 +137,7 @@ export default function ServicePicker({ visit, onClose }: { visit: Visit; onClos
         </p>
       )}
       <button
+        type="button"
         className="button"
         disabled={!selected.length || operation.pending}
         onClick={() => {
@@ -152,6 +165,6 @@ export default function ServicePicker({ visit, onClose }: { visit: Visit; onClos
       >
         {operation.pending ? 'Añadiendo…' : batch ? 'Añadir tanda' : 'Añadir a la visita'}
       </button>
-    </div>
+    </EditorForm>
   );
 }

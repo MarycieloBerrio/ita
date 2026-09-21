@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -79,7 +80,13 @@ export default function PaymentEditor({
     }
   }
   return (
-    <form className="card stack" onSubmit={(event) => void form.handleSubmit(save)(event)}>
+    <EditorForm
+      busy={operation.pending}
+      dirty={form.formState.isDirty}
+      onChangeCapture={operation.clear}
+      className="card stack"
+      onSubmit={(event) => void form.handleSubmit(save)(event)}
+    >
       <h3>{correction ? 'Rectificar pago registrado por error' : 'Registrar pago'}</h3>
       {correction ? (
         <p>
@@ -146,11 +153,11 @@ export default function PaymentEditor({
               ? 'Confirmar rectificación'
               : 'Confirmar pago'}
         </button>
-        <button type="button" className="button-secondary" onClick={onClose}>
+        <button type="button" className="button-secondary" data-editor-close onClick={onClose}>
           Cancelar
         </button>
         {form.formState.isDirty ? <span className="badge">Cambios pendientes</span> : null}
       </div>
-    </form>
+    </EditorForm>
   );
 }

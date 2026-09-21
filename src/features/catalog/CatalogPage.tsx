@@ -50,16 +50,18 @@ export function PriceCell({ service, owner }: { service: Service; owner: boolean
         <label>
           <span className="sr-only">Tarifa de {service.name}</span>
           <input
+            disabled={operation.pending}
             inputMode="numeric"
             value={price}
             placeholder="Pendiente"
-            onChange={(event) =>
+            onChange={(event) => {
+              operation.clear();
               setDraft((previous) => ({
                 price: event.target.value,
                 original: previous?.original ?? latestPrice,
                 version: previous?.version ?? service.version,
-              }))
-            }
+              }));
+            }}
           />
         </label>
         <button

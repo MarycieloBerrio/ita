@@ -2,7 +2,7 @@
 
 ## Proyecto existente
 
-La CLI oficial está fijada en `package-lock.json`. El piloto se publica en https://ita.mberrioz.workers.dev. Autenticarse mediante `npx supabase login` y vincular el único proyecto autorizado:
+La CLI oficial está fijada en `package-lock.json`. La aplicación se publica en https://ita.mberrioz.workers.dev. Autenticarse mediante `npx supabase login` y vincular el único proyecto autorizado:
 
 ```sh
 npx supabase link --project-ref mrnzvgivfjivuobpgens
@@ -35,7 +35,7 @@ La aplicación también permite cambiarla desde el nombre personal del menú, en
 
 ## Cloudflare Workers Static Assets
 
-Completar `.env.local` solo con configuración pública y `VITE_APP_ENV=pilot`; construir con `npm run build`. `wrangler.jsonc` configura los archivos de `dist` y el retorno a `index.html` para rutas internas. `public/_headers` aplica la política de seguridad y limita conexiones al Supabase existente.
+Completar `.env.local` solo con la configuración pública de Supabase y construir con `npm run build`. `wrangler.jsonc` configura los archivos de `dist` y el retorno a `index.html` para rutas internas. `public/_headers` aplica la política de seguridad y limita conexiones al Supabase existente.
 
 ```sh
 npx wrangler login
@@ -48,11 +48,11 @@ Configurar Supabase Auth Site URL y Redirect URLs con la dirección exacta publi
 
 ## Antes de operación real
 
-- Aceptar la vectorización y correspondencia de zonas en el prototipo.
+- Revisar la vectorización y correspondencia de zonas del plano técnico.
 - Revisar en Huawei física ambas orientaciones, teclado, SVG y descarga.
 - Confirmar texto de datos personales, responsable y soporte de recuperación; configurar métodos de pago reales.
 - Activar respaldo cifrado dentro de cuota, custodiar la clave aparte y probar recuperación con Auth real.
-- Separar o retirar de forma autorizada los registros del piloto. No convertir datos ficticios en clientes, ventas o saldos reales.
-- Registrar aprobación de arranque y construir con `VITE_APP_ENV=production` solo entonces.
+- Registros de preparación retirados el 20 de septiembre de 2026 con copia cifrada previa y dos cuentas personales conservadas.
+- Registrar los cambios operativos relevantes en la documentación interna.
 
 La dueña completa categorías, precios y conteo físico inicial desde la aplicación. No se importan datos históricos ni se presuponen tarifas, bancos o existencias.

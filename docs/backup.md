@@ -1,6 +1,6 @@
 # Respaldo y recuperación de ita
 
-Estado: copia hospedada y recuperación PostgreSQL/Auth local verificadas; proceso diario desactivado hasta configurar secretos, medir cuotas y comprobar subida/descarga. No comenzar a guardar datos reales antes de cerrar estos pendientes. El repositorio se mantiene **público por decisión expresa de su titular**, que sustituye la propuesta privada del plan. Solo se publica el archivo cifrado; hay que considerar que terceros pueden obtenerlo. Su confidencialidad depende de una clave aleatoria fuerte y de su custodia separada.
+Estado: copia hospedada y recuperación PostgreSQL/Auth local verificadas; proceso diario desactivado hasta configurar secretos, medir cuotas y comprobar subida/descarga. El repositorio se mantiene **público por decisión expresa de su titular**, que sustituye la propuesta privada del plan. Solo se publica el archivo cifrado; hay que considerar que terceros pueden obtenerlo. Su confidencialidad depende de una clave aleatoria fuerte y de su custodia separada.
 
 ## Qué conserva
 
@@ -55,6 +55,8 @@ La herramienta de recuperación rutinaria **solo acepta un destino local explíc
 Objetivos propuestos: copia de no más de 24 horas y recuperación en un día laborable con copia válida y soporte disponible. No son garantías del proveedor gratuito.
 
 ## Evidencia local y pendientes
+
+El 20 de septiembre de 2026, antes de la limpieza inicial, se creó `ita-prelimpieza-20260920.ita.enc` en `.local/para-USB` (71.521 bytes; SHA-256 `7378d03312bf38aa56f10b91d69c3f01b41873775f8b356901adef9dd860e194`). Se comprobó el descifrado, la lista de archivos, el manifiesto y los cinco hashes. Su clave está en el almacenamiento local de la titular, fuera de OneDrive y de Git. Aún falta copiar el archivo a la memoria USB y comprobar allí su lectura. Las cinco ejecuciones programadas más recientes de GitHub Actions quedaron en estado `skipped` por la condición `ITA_BACKUP_ENABLED`; no hay respaldo diario activo ni una ejecución exitosa registrada en la app.
 
 Ejecutado el 12 de septiembre y repetida la recuperación nativa el 13 de septiembre de 2026:
 

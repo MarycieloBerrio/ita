@@ -21,7 +21,7 @@ Solo la dueña registra conteo inicial, compras recibidas, consumo interno, merm
 
 La trabajadora ve y modifica solo sus citas. La dueña puede asignar y reasignar ambas agendas. Una profesional no puede tener citas solapadas; dos profesionales pueden atender a la misma hora. Las citas contiguas son válidas.
 
-Los cumpleaños aparecen como eventos de todo el día y no reservan horas. El último día del mes se muestra el listado del mes siguiente; marcarlo visto se guarda por usuaria. Si no se abrió la aplicación, el primer acceso del mes recupera ese aviso. No se envían recordatorios de citas. Como convención del prototipo, el 29 de febrero se observa el 28 en años no bisiestos, conservando la fecha real.
+Los cumpleaños aparecen como eventos de todo el día y no reservan horas. El último día del mes se muestra el listado del mes siguiente; marcarlo visto se guarda por usuaria. Si no se abrió la aplicación, el primer acceso del mes recupera ese aviso. No se envían recordatorios de citas. El 29 de febrero se observa el 28 en años no bisiestos, conservando la fecha real.
 
 ## Dueña
 

@@ -7,7 +7,6 @@ import { bogotaDate, QueryFeedback } from '../catalog/operations';
 import ExportButton from '../exports/ExportButton';
 import PaymentMethods from './PaymentMethods';
 import Profiles from './Profiles';
-import SalonSettings from './SalonSettings';
 import '../catalog/catalog.css';
 
 function OwnerSettings() {
@@ -37,7 +36,6 @@ function OwnerSettings() {
       {request.data ? (
         <>
           <PaymentMethods methods={request.data.payment_methods} />
-          <SalonSettings key={request.data.settings.version} settings={request.data.settings} />
           <Profiles profiles={request.data.profiles} />
         </>
       ) : null}
@@ -76,9 +74,8 @@ function OwnerSettings() {
           Ejecutar o descargar respaldo en GitHub <ExternalLink size={16} aria-hidden="true" />
         </a>
         <p className="muted">
-          Antes de usar datos reales debe completarse una restauración verificada y acordarse
-          responsable de soporte y destino de copia independiente. El estado de copia no demuestra
-          por sí solo que esa restauración se haya probado.
+          Comprueba periódicamente una restauración y conserva una copia independiente. El estado de
+          la copia no demuestra por sí solo que la restauración haya sido verificada.
         </p>
       </section>
       <section className="card stack">

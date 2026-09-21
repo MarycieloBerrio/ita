@@ -71,7 +71,7 @@ No se cobra hasta que todas las prestaciones/entregas estén confirmadas, cada i
 
 Los materiales anotados en fichas no crean movimientos de inventario. Las salidas de uso interno son manuales de la dueña. Confirmar una venta crea su salida atómica única. Se impide stock negativo y archivar productos con existencias. Una corrección de inventario registra una cantidad diferencial y enlaza el movimiento original; no representa una devolución comercial.
 
-Los cumpleaños se calculan sin filas anuales duplicadas. El último día del mes se muestra el siguiente; si no se abrió la aplicación, se recupera el aviso del mes actual. Su lectura se guarda por identidad y mes. El 29 de febrero se observa el 28 fuera de años bisiestos, conservando la fecha original. Estas últimas convenciones son revisables en el prototipo. No hay recordatorios de citas.
+Los cumpleaños se calculan sin filas anuales duplicadas. El último día del mes se muestra el siguiente; si no se abrió la aplicación, se recupera el aviso del mes actual. Su lectura se guarda por identidad y mes. El 29 de febrero se observa el 28 fuera de años bisiestos, conservando la fecha original. No hay recordatorios de citas.
 
 ## Verificación reproducible
 

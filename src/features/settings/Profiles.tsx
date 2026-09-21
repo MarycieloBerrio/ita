@@ -1,32 +1,71 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import EditorForm from '../../components/EditorForm';
 import type { Profile } from '../../lib/contracts';
 import { OperationFeedback, useOperation } from '../catalog/operations';
 
 function ProfileRow({ profile }: { profile: Profile }) {
   const operation = useOperation();
+  const [base, setBase] = useState(profile);
   const [name, setName] = useState(profile.display_name);
   const [role, setRole] = useState(profile.role);
   const [active, setActive] = useState(profile.active);
-  const dirty = name !== profile.display_name || role !== profile.role || active !== profile.active;
+  const dirty = name !== base.display_name || role !== base.role || active !== base.active;
+  useEffect(() => {
+    if (dirty || operation.pending || profile.version <= base.version) return;
+    const timer = setTimeout(() => {
+      setBase(profile);
+      setName(profile.display_name);
+      setRole(profile.role);
+      setActive(profile.active);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [profile, base.version, dirty, operation.pending]);
   async function save() {
     if (!name.trim()) {
       operation.setError('Escribe un nombre.');
       return;
     }
-    await operation.run(
+    const result = await operation.run<Profile>(
       'profile.save',
-      { id: profile.id, version: profile.version, display_name: name.trim(), role, active },
+      { id: profile.id, version: base.version, display_name: name.trim(), role, active },
       'Perfil actualizado',
     );
+    if (result) {
+      setBase(result);
+      setName(result.display_name);
+      setRole(result.role);
+      setActive(result.active);
+    }
   }
   return (
-    <form
+    <EditorForm
+      busy={operation.pending}
+      dirty={dirty}
+      onChangeCapture={operation.clear}
       className="stack"
       onSubmit={(event) => {
         event.preventDefault();
         void save();
       }}
     >
+      {dirty && profile.version !== base.version && (
+        <div className="error" role="alert">
+          Otra sesión cambió este perfil. Conservamos tus cambios para revisarlos.
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() => {
+              setBase(profile);
+              setName(profile.display_name);
+              setRole(profile.role);
+              setActive(profile.active);
+              operation.clear();
+            }}
+          >
+            Descartar cambios y cargar perfil vigente
+          </button>
+        </div>
+      )}
       <div className="form-grid">
         <label className="field">
           Nombre visible
@@ -60,7 +99,7 @@ function ProfileRow({ profile }: { profile: Profile }) {
         </button>
         {dirty ? <span className="badge">Cambios de acceso pendientes</span> : null}
       </div>
-    </form>
+    </EditorForm>
   );
 }
 
@@ -74,7 +113,7 @@ export default function Profiles({ profiles }: { profiles: Profile[] }) {
         administrativo de Supabase Auth.
       </p>
       {profiles.map((profile) => (
-        <ProfileRow key={`${profile.id}-${profile.version}`} profile={profile} />
+        <ProfileRow key={profile.id} profile={profile} />
       ))}
     </section>
   );

@@ -21,6 +21,9 @@ export async function createTestDatabase(native = false) {
       throw error;
     }
   }
+  await db.exec(
+    "update ita_private.settings set responsible_name='Salón de prueba',responsible_contact='contacto@example.invalid / 3000000000'",
+  );
   return db;
 }
 
@@ -77,19 +80,39 @@ async function run() {
     );
     let client, cat, general, color, prodcat, product, method, ownVisit, workerVisit;
     await as(owner, async () => {
+      await denied(
+        () => command('client.save', { name: 'Sin autorización' }),
+        /Confirma la autorización/,
+      );
       client = await command('client.save', {
         name: 'Clienta ficticia',
+        consent: 'client-notice-v1',
         birth_day: 29,
         birth_month: 2,
       });
+      check(
+        client.consent.includes('Aviso de datos personales v1.'),
+        'Consent recorded with version',
+      );
       await denied(
-        () => command('client.save', { name: 'Fecha imposible', birth_day: 31, birth_month: 4 }),
+        () => command('client.save', { ...client, consent: 'Constancia modificada' }),
+        /no se puede modificar/,
+      );
+      await denied(
+        () =>
+          command('client.save', {
+            name: 'Fecha imposible',
+            consent: 'client-notice-v1',
+            birth_day: 31,
+            birth_month: 4,
+          }),
         /check constraint/,
       );
       await denied(
         () =>
           command('client.save', {
             name: 'Fecha imposible',
+            consent: 'client-notice-v1',
             birth_day: 29,
             birth_month: 2,
             birth_year: 2025,

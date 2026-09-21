@@ -1,8 +1,8 @@
-# Plano de color: prototipo v1 para revisar
+# Plano de color · versión 1
 
 Referencia: imagen aportada el 11 de septiembre de 2026. Las cinco vistas y las cuatro opciones están confirmadas. Izquierda y derecha pertenecen a la clienta. No son nombres anatómicos los rótulos Zona 01–08.
 
-La vectorización propone estas uniones de los trazos ambiguos: prolongar el trazo corto frontal de los perfiles hasta el contorno superior; reunir los trazos posterior en un punto interior y separar sus áreas superiores con la línea media. Las líneas punteadas no crean zonas; el trazo que sobresale de la frente tampoco. El contorno del cabello se ha cerrado para permitir tocar áreas interiores. Deben revisarse estas uniones y correspondencias en el prototipo con la dueña antes de operar con fichas reales.
+La vectorización usa estas uniones para los trazos ambiguos: prolongar el trazo corto frontal de los perfiles hasta el contorno superior; reunir los trazos posteriores en un punto interior y separar sus áreas superiores con la línea media. Las líneas punteadas no crean zonas; el trazo que sobresale de la frente tampoco. El contorno del cabello se cierra para permitir tocar las áreas interiores.
 
 Correspondencia propuesta de superficies:
 

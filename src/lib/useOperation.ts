@@ -13,6 +13,7 @@ export function useOperation() {
     payload: object,
   ): Promise<T | null> {
     if (busy.current) return null;
+    setSaved(false);
     if (!navigator.onLine) {
       setError('Sin conexión. Conserva esta página abierta para reintentar.');
       return null;
@@ -64,5 +65,14 @@ export function useOperation() {
       setPending(false);
     }
   }
-  return { run, pending, error, saved };
+  return {
+    run,
+    pending,
+    error,
+    saved,
+    clear: () => {
+      setError('');
+      setSaved(false);
+    },
+  };
 }

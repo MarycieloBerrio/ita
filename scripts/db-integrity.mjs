@@ -392,6 +392,7 @@ export async function verifyIntegrity(db, fixture) {
     await denied(() => cmd('expense.save', expenseData), /unique constraint/);
     const duplicate = await cmd('client.save', {
       name: 'Clienta ficticia',
+      consent: 'client-notice-v1',
       phone: '+57 300 123 4567',
     });
     check(
@@ -423,7 +424,7 @@ export async function verifyIntegrity(db, fixture) {
       'Archiving updates birthday projection',
     );
     await denied(
-      () => cmd('client.save', { name: 'Sin mes', birth_year: 2000 }),
+      () => cmd('client.save', { name: 'Sin mes', consent: 'client-notice-v1', birth_year: 2000 }),
       /check constraint/,
     );
     await db.exec('reset role');

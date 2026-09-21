@@ -1,6 +1,6 @@
 # Registro de entrega y verificación
 
-Estado: desarrollo y verificación de la primera versión en curso. Este documento no autoriza operación real ni declara terminado lo pendiente.
+Estado: aplicación publicada. Este documento conserva la evidencia técnica y los pendientes operativos.
 
 ## Accesos comprobados
 
@@ -31,11 +31,25 @@ En el sitio publicado se comprobó con cada cuenta personal: login real, navegac
 
 Supabase Advisors no reporta errores ni advertencias de funciones accesibles indebidamente después de la cuarta migración. Permanece el aviso de protección contra contraseñas filtradas, función disponible únicamente en Pro; no se activó un plan pago.
 
+## Preparación del 20 de septiembre de 2026
+
+- La navegación lateral pasa a panel desplegable hasta 1024 px. Se verificaron apertura, cierre por Escape y fondo, navegación y retorno a la barra fija en escritorio.
+- Por autorización expresa de la titular, se retiraron los registros operativos iniciales: 21 tablas de negocio y auditoría quedaron vacías y se eliminaron cuatro identidades temporales. Se conservaron las dos cuentas personales activas, la fila de ajustes y las cuatro migraciones. El script de limpieza conserva guardas de recuento y transacción.
+- Antes de la limpieza se creó una copia cifrada nueva. Se comprobó el descifrado, el manifiesto y los cinco hashes; la clave se guardó fuera de OneDrive. La copia todavía no se ha transferido a USB.
+- Pasaron 91 pruebas unitarias/de interfaz, 162 comprobaciones SQL embebidas, los diez recorridos Playwright, TypeScript, lint, formato y compilación web. La auditoría de dependencias de producción reportó cero vulnerabilidades; el asesor de rendimiento de Supabase no reportó problemas.
+
+## Actualización del 21 de septiembre de 2026
+
+- El alta de clientas muestra un aviso genérico con la identidad y contacto configurados. Cada nueva ficha exige una casilla desmarcada por defecto; la cuenta que registra confirma haber obtenido autorización expresa antes de guardar. La base rechaza altas sin confirmación y conserva una constancia con versión, fecha, cuenta y contacto vigente, que no puede editarse.
+- La quinta migración se aplicó al proyecto vinculado. Se comprobaron el disparador activo, los permisos de la función y que seguían cero clientas y dos perfiles. Los asesores no añadieron problemas; permanece el aviso previo de protección contra contraseñas filtradas.
+- La versión `a86342d2-b2b3-42b5-a7e3-da6bf633bc5d` publicó la navegación de tablet y el alta con autorización. Por HTTPS se verificó la ruta de clientas y el módulo publicado. El borrador privado no está en Git ni en el paquete publicado.
+- Aprobaron 91 pruebas Vitest, 165 comprobaciones SQL y los once recorridos Playwright. TypeScript, lint y compilación web aprobaron.
+
 ## Pendiente
 
-Respaldo diario activado y medido, entrega efectiva de clave y copia independiente, aceptación visual del plano y prueba física Huawei. La titular confirmó que se encargará del soporte y guardará la copia en USB; el paquete cifrado está preparado, sin memoria conectada para comprobar su transferencia. La publicación sigue en piloto; no se autoriza cargar clientas, ventas ni saldos reales. La configuración del catálogo real y el conteo de arranque los realiza la dueña cuando se apruebe la operación.
+Respaldo diario activado y medido, entrega efectiva de clave y copia independiente, aceptación visual del plano y revisión física Huawei. Las últimas cinco ejecuciones programadas de GitHub Actions aparecieron como `skipped` por la condición de activación; aún no existe una copia diaria registrada en la aplicación. La titular confirmó que se encargará del soporte y guardará la copia en USB; el paquete cifrado está preparado, sin memoria conectada para comprobar su transferencia. El nombre y contacto de la responsable quedaron verificados y la política de tratamiento está publicada. La configuración del catálogo y el conteo de arranque los realiza la dueña.
 
-## Convenciones propuestas del prototipo
+## Convenciones del plano técnico
 
 Una profesional responsable por visita y cuenta; zonas del plano numeradas sin inventar nombres técnicos; una selección por zona para todo el servicio; semana lunes a domingo; 29 de febrero observado el 28 fuera de año bisiesto; recuperación del aviso mensual al primer acceso. Estas convenciones son revisables y se distinguen de las decisiones confirmadas de negocio.
 

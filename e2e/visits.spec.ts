@@ -26,6 +26,7 @@ test('visita Color y General: guarda plano, primera valoración posterior y dos 
   });
   const client = await sql.command<CommandResult>('owner', 'client.save', {
     name: 'Clienta de prueba',
+    consent: 'client-notice-v1',
     birth_day: 29,
     birth_month: 2,
   });
@@ -98,6 +99,7 @@ test('agenda usa Bogotá con dispositivo de otra zona y oculta citas ajenas', as
 }) => {
   const client = await sql.command<CommandResult>('owner', 'client.save', {
     name: 'Cita ficticia',
+    consent: 'client-notice-v1',
   });
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   await sql.command('owner', 'appointment.save', {
@@ -159,6 +161,7 @@ test('corregir una ficha finalizada vuelve a lectura y conserva la corrección a
   });
   const client = await sql.command<CommandResult>('owner', 'client.save', {
     name: 'Clienta ficticia de corrección',
+    consent: 'client-notice-v1',
   });
   const visit = await sql.command<CommandResult>('owner', 'visit.create', {
     client_id: client.id,

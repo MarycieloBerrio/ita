@@ -4,6 +4,7 @@ import { useAuth } from './lib/auth';
 import { Loading } from './components/Feedback';
 import Layout from './components/Layout';
 import LoginPage from './features/auth/LoginPage';
+import PrivacyPolicyPage from './features/privacy/PrivacyPolicyPage';
 const HomePage = lazy(() => import('./features/home/HomePage'));
 const ClientsPage = lazy(() => import('./features/clients/ClientsPage'));
 const ClientPage = lazy(() => import('./features/clients/ClientPage'));
@@ -14,7 +15,7 @@ const InventoryPage = lazy(() => import('./features/inventory/InventoryPage'));
 const FinancePage = lazy(() => import('./features/finance/FinancePage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const PasswordPage = lazy(() => import('./features/auth/PasswordPage'));
-export default function App() {
+function PrivateApp() {
   const { profile, loading } = useAuth();
   if (loading) return <Loading />;
   if (!profile) return <LoginPage />;
@@ -43,4 +44,10 @@ export default function App() {
       </Suspense>
     </BrowserRouter>
   );
+}
+
+export default function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/privacidad') return <PrivacyPolicyPage />;
+  return <PrivateApp />;
 }

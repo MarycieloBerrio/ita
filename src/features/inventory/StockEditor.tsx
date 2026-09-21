@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -100,7 +101,13 @@ export default function StockEditor({
           Anotar materiales en una ficha no reduce existencias. Confirma aquí el movimiento físico.
         </p>
       )}
-      <form className="stack" onSubmit={(event) => void form.handleSubmit(save)(event)}>
+      <EditorForm
+        busy={operation.pending}
+        dirty={form.formState.isDirty}
+        onChangeCapture={operation.clear}
+        className="stack"
+        onSubmit={(event) => void form.handleSubmit(save)(event)}
+      >
         <div className="form-grid">
           <label className="field">
             Producto
@@ -186,12 +193,12 @@ export default function StockEditor({
                   ? 'Registrar salida'
                   : 'Confirmar movimiento'}
           </button>
-          <button className="button-secondary" type="button" onClick={onClose}>
+          <button className="button-secondary" type="button" data-editor-close onClick={onClose}>
             Cancelar
           </button>
           {form.formState.isDirty ? <span className="badge">Cambios pendientes</span> : null}
         </div>
-      </form>
+      </EditorForm>
     </section>
   );
 }

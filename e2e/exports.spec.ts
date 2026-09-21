@@ -18,10 +18,12 @@ test('dueña descarga clienta completa y registros globales, sin truncar más de
   });
   const client = await sql.command<CommandResult>('owner', 'client.save', {
     name: 'Clienta ficticia exportación',
+    consent: 'client-notice-v1',
     notes: '</script><img src=x> · texto libre',
   });
   const other = await sql.command<CommandResult>('owner', 'client.save', {
     name: 'Otra clienta ficticia',
+    consent: 'client-notice-v1',
   });
   for (let index = 0; index < 55; index++)
     await sql.command('owner', 'visit.create', { client_id: client.id, service_ids: [service.id] });

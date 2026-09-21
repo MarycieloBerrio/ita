@@ -84,6 +84,7 @@ export function useOperation() {
     message = 'Guardado confirmado',
   ): Promise<T | undefined> {
     if (busy.current) return undefined;
+    setSuccess('');
     if (!navigator.onLine) {
       setError(
         'Sin conexión. Conservamos lo escrito en esta pestaña; vuelve a intentar cuando tengas Internet.',
@@ -143,7 +144,10 @@ export function useOperation() {
     pending,
     error,
     success,
-    setError,
+    setError: (message: string) => {
+      setSuccess('');
+      setError(message);
+    },
     clear: () => {
       setError('');
       setSuccess('');
@@ -159,7 +163,7 @@ export function OperationFeedback({ error, success }: { error?: string; success?
           {error}
         </p>
       ) : null}
-      {success ? (
+      {success && !error ? (
         <p className="success" role="status">
           {success}
         </p>

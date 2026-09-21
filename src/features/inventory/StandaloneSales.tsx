@@ -44,143 +44,145 @@ function SaleAccount({
     }
   }
   return (
-    <section className="card stack">
-      <div className="actions">
-        <h2>Cuenta de venta</h2>
-        <button className="button-secondary" onClick={onClose}>
-          Volver a ventas
-        </button>
-      </div>
-      <p className="muted">
-        Cuenta {id.slice(0, 8)}. Confirma la entrega para generar cargo y salida en una sola
-        operación.
-      </p>
-      <QueryFeedback pending={request.isPending} error={request.error} retry={request.refetch} />
-      <OperationFeedback error={operation.error} success={operation.success} />
-      <div className="sales-line">
-        <label className="field">
-          Producto
-          <select value={productId} onChange={(event) => setProductId(event.target.value)}>
-            <option value="">Seleccionar</option>
-            {products
-              .filter((item) => item.active && item.usage !== 'internal')
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} · {cop(item.sale_price)} · {item.stock} disponibles
-                </option>
-              ))}
-          </select>
-        </label>
-        <label className="field">
-          Unidades
-          <input
-            inputMode="numeric"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-          />
-        </label>
-        <button
-          className="button-secondary"
-          disabled={operation.pending}
-          onClick={() => void add()}
-        >
-          Añadir producto
-        </button>
-      </div>
-      {request.data?.sales.length === 0 ? (
-        <p className="empty">Añade los productos que vas a entregar.</p>
-      ) : null}
-      {request.data?.sales.map((line) => (
-        <div className="card" key={line.id}>
-          <div className="actions">
-            <strong>
-              {line.name} · {line.quantity} × {cop(line.unit_price)} ={' '}
-              {cop(line.quantity * line.unit_price)}
-            </strong>
-            <span className="badge">
-              {
-                {
-                  draft: 'Pendiente de entrega',
-                  confirmed: 'Venta confirmada',
-                  discarded: 'Descartado',
-                }[line.status]
-              }
-            </span>
-          </div>
-          <p className="muted">{line.path}</p>
-          {line.status === 'draft' ? (
-            <div className="actions">
-              <button
-                className="button"
-                disabled={operation.pending}
-                onClick={() =>
-                  void operation.run(
-                    'sale.confirm',
-                    { id: line.id, version: line.version },
-                    'Venta confirmada; unidades descontadas una sola vez',
-                  )
-                }
-              >
-                Confirmar venta y entrega
-              </button>
-              <button
-                className="button-secondary"
-                disabled={operation.pending}
-                onClick={() =>
-                  void operation.run(
-                    'sale.discard',
-                    { id: line.id, version: line.version },
-                    'Borrador descartado',
-                  )
-                }
-              >
-                Descartar borrador
-              </button>
-            </div>
-          ) : null}
+    <section className="card stack" onChangeCapture={operation.clear}>
+      <fieldset className="editor-fields" disabled={operation.pending}>
+        <div className="actions">
+          <h2>Cuenta de venta</h2>
+          <button className="button-secondary" onClick={onClose}>
+            Volver a ventas
+          </button>
         </div>
-      ))}
-      {account ? (
-        <>
-          <div className="operation-summary">
-            <div>
-              <span>Cargos confirmados</span>
-              <strong>{cop(account.total)}</strong>
-            </div>
-            <div>
-              <span>Pagos válidos</span>
-              <strong>{cop(account.paid)}</strong>
-            </div>
-            <div>
-              <span>Saldo pendiente</span>
-              <strong>{cop(account.balance)}</strong>
-            </div>
-          </div>
-          {account.ready_for_payment && (account.balance ?? 0) > 0 ? (
-            <button className="button" onClick={() => setPayment(true)}>
-              Registrar pago completo o parcial
-            </button>
-          ) : null}
-          {payment ? (
-            <PaymentEditor
-              account={account}
-              methods={settings.data?.payment_methods ?? []}
-              onClose={() => setPayment(false)}
+        <p className="muted">
+          Cuenta {id.slice(0, 8)}. Confirma la entrega para generar cargo y salida en una sola
+          operación.
+        </p>
+        <QueryFeedback pending={request.isPending} error={request.error} retry={request.refetch} />
+        <OperationFeedback error={operation.error} success={operation.success} />
+        <div className="sales-line">
+          <label className="field">
+            Producto
+            <select value={productId} onChange={(event) => setProductId(event.target.value)}>
+              <option value="">Seleccionar</option>
+              {products
+                .filter((item) => item.active && item.usage !== 'internal')
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {cop(item.sale_price)} · {item.stock} disponibles
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="field">
+            Unidades
+            <input
+              inputMode="numeric"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
             />
-          ) : null}
-        </>
-      ) : null}
-      {request.data?.payments.length ? (
-        <details>
-          <summary>Pagos registrados</summary>
-          {request.data.payments.map((item) => (
-            <p key={item.id}>
-              {bogotaDate(item.paid_at)} · {cop(item.amount)} · {item.method_name}{' '}
-              {item.corrected_by ? '(rectificado)' : ''}
-            </p>
-          ))}
-        </details>
-      ) : null}
+          </label>
+          <button
+            className="button-secondary"
+            disabled={operation.pending}
+            onClick={() => void add()}
+          >
+            Añadir producto
+          </button>
+        </div>
+        {request.data?.sales.length === 0 ? (
+          <p className="empty">Añade los productos que vas a entregar.</p>
+        ) : null}
+        {request.data?.sales.map((line) => (
+          <div className="card" key={line.id}>
+            <div className="actions">
+              <strong>
+                {line.name} · {line.quantity} × {cop(line.unit_price)} ={' '}
+                {cop(line.quantity * line.unit_price)}
+              </strong>
+              <span className="badge">
+                {
+                  {
+                    draft: 'Pendiente de entrega',
+                    confirmed: 'Venta confirmada',
+                    discarded: 'Descartado',
+                  }[line.status]
+                }
+              </span>
+            </div>
+            <p className="muted">{line.path}</p>
+            {line.status === 'draft' ? (
+              <div className="actions">
+                <button
+                  className="button"
+                  disabled={operation.pending}
+                  onClick={() =>
+                    void operation.run(
+                      'sale.confirm',
+                      { id: line.id, version: line.version },
+                      'Venta confirmada; unidades descontadas una sola vez',
+                    )
+                  }
+                >
+                  Confirmar venta y entrega
+                </button>
+                <button
+                  className="button-secondary"
+                  disabled={operation.pending}
+                  onClick={() =>
+                    void operation.run(
+                      'sale.discard',
+                      { id: line.id, version: line.version },
+                      'Borrador descartado',
+                    )
+                  }
+                >
+                  Descartar borrador
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ))}
+        {account ? (
+          <>
+            <div className="operation-summary">
+              <div>
+                <span>Cargos confirmados</span>
+                <strong>{cop(account.total)}</strong>
+              </div>
+              <div>
+                <span>Pagos válidos</span>
+                <strong>{cop(account.paid)}</strong>
+              </div>
+              <div>
+                <span>Saldo pendiente</span>
+                <strong>{cop(account.balance)}</strong>
+              </div>
+            </div>
+            {account.ready_for_payment && (account.balance ?? 0) > 0 ? (
+              <button className="button" onClick={() => setPayment(true)}>
+                Registrar pago completo o parcial
+              </button>
+            ) : null}
+            {payment ? (
+              <PaymentEditor
+                account={account}
+                methods={settings.data?.payment_methods ?? []}
+                onClose={() => setPayment(false)}
+              />
+            ) : null}
+          </>
+        ) : null}
+        {request.data?.payments.length ? (
+          <details>
+            <summary>Pagos registrados</summary>
+            {request.data.payments.map((item) => (
+              <p key={item.id}>
+                {bogotaDate(item.paid_at)} · {cop(item.amount)} · {item.method_name}{' '}
+                {item.corrected_by ? '(rectificado)' : ''}
+              </p>
+            ))}
+          </details>
+        ) : null}
+      </fieldset>
     </section>
   );
 }

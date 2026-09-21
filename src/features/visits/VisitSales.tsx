@@ -22,7 +22,7 @@ export default function VisitSales({ detail }: { detail: VisitDetail }) {
         descontarse del inventario.
       </p>
       {!readonly && (
-        <>
+        <fieldset className="editor-fields" disabled={operation.pending}>
           <div className="form-grid">
             <label className="field">
               Producto
@@ -86,7 +86,7 @@ export default function VisitSales({ detail }: { detail: VisitDetail }) {
           >
             Añadir producto a la cuenta
           </button>
-        </>
+        </fieldset>
       )}
       {operation.error && (
         <p className="error" role="alert">

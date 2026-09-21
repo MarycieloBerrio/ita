@@ -373,7 +373,7 @@ export function ColorMapEditor({ value, onChange, readOnly = false, onPendingCha
         </aside>
       </div>
       <p className="ita-template-note">
-        Plantilla v{value.templateVersion} · Prototipo de zonas numeradas para revisión.
+        Plantilla v{value.templateVersion} · Zonas numeradas del plano técnico.
       </p>
       {expandedView && (
         <dialog

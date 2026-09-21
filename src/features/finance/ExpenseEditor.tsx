@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -86,7 +87,13 @@ export default function ExpenseEditor({
     }
   }
   return (
-    <form className="card stack" onSubmit={(event) => void form.handleSubmit(save)(event)}>
+    <EditorForm
+      busy={operation.pending}
+      dirty={form.formState.isDirty}
+      onChangeCapture={operation.clear}
+      className="card stack"
+      onSubmit={(event) => void form.handleSubmit(save)(event)}
+    >
       <h2>{correction ? 'Rectificar egreso registrado por error' : 'Registrar egreso pagado'}</h2>
       <p className="muted">
         Registra la compra una sola vez cuando se paga. Recibir unidades en inventario no crea otro
@@ -166,11 +173,11 @@ export default function ExpenseEditor({
               ? 'Confirmar rectificación'
               : 'Confirmar egreso'}
         </button>
-        <button className="button-secondary" type="button" onClick={onClose}>
+        <button className="button-secondary" type="button" data-editor-close onClick={onClose}>
           Cancelar
         </button>
         {form.formState.isDirty ? <span className="badge">Cambios pendientes</span> : null}
       </div>
-    </form>
+    </EditorForm>
   );
 }

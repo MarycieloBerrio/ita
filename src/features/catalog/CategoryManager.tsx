@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -41,6 +42,13 @@ export default function CategoryManager({
     },
   });
   function edit(category: Category | null) {
+    if (operation.pending) return;
+    if (
+      opened &&
+      form.formState.isDirty &&
+      !window.confirm('Hay cambios sin guardar. ¿Cambiar de categoría y descartarlos?')
+    )
+      return;
     setEditing(category);
     form.reset({
       name: category?.name ?? '',
@@ -83,7 +91,13 @@ export default function CategoryManager({
       </p>
       <OperationFeedback error={operation.error} success={operation.success} />
       {opened ? (
-        <form onSubmit={(event) => void form.handleSubmit(save)(event)} className="stack">
+        <EditorForm
+          busy={operation.pending}
+          dirty={form.formState.isDirty}
+          onChangeCapture={operation.clear}
+          onSubmit={(event) => void form.handleSubmit(save)(event)}
+          className="stack"
+        >
           <div className="form-grid">
             <label className="field">
               Nombre
@@ -131,7 +145,12 @@ export default function CategoryManager({
             <button className="button" disabled={operation.pending}>
               {operation.pending ? 'Guardando…' : 'Guardar categoría'}
             </button>
-            <button type="button" className="button-secondary" onClick={() => setOpened(false)}>
+            <button
+              type="button"
+              className="button-secondary"
+              data-editor-close
+              onClick={() => setOpened(false)}
+            >
               Cancelar
             </button>
             {form.formState.isDirty ? <span className="badge">Cambios pendientes</span> : null}
@@ -163,7 +182,7 @@ export default function CategoryManager({
               </button>
             </details>
           ) : null}
-        </form>
+        </EditorForm>
       ) : null}
       {categories.length === 0 ? (
         <p className="empty">Aún no hay categorías. Crea la organización que usa tu salón.</p>

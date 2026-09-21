@@ -36,14 +36,14 @@ export default function ClientPage() {
           </p>
         </div>
         <div className="actions">
-          <button className="button-secondary" onClick={() => setEdit(!edit)}>
+          <button className="button-secondary" disabled={edit} onClick={() => setEdit(true)}>
             <Pencil size={17} />
             Editar datos
           </button>
           <ActionButton
             action="visit.create"
             payload={{ client_id: client.id, professional_id: profile?.id }}
-            disabled={!client.active}
+            disabled={!client.active || edit}
             onSuccess={(r) => navigate(`/visitas/${String(r.id ?? r.visit_id)}`)}
           >
             <Plus size={17} />

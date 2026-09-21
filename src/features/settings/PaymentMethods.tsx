@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EditorForm from '../../components/EditorForm';
 import type { PaymentMethod } from '../../lib/contracts';
 import { OperationFeedback, useOperation } from '../catalog/operations';
 
@@ -8,7 +9,13 @@ export default function PaymentMethods({ methods }: { methods: PaymentMethod[] }
   const [name, setName] = useState('');
   const [cash, setCash] = useState(false);
   const [active, setActive] = useState(true);
+  const dirty =
+    name !== (editing?.name ?? '') ||
+    cash !== (editing?.is_cash ?? false) ||
+    active !== (editing?.active ?? true);
   function edit(method: PaymentMethod | null) {
+    if (operation.pending) return;
+    if (dirty && !window.confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
     setEditing(method);
     setName(method?.name ?? '');
     setCash(method?.is_cash ?? false);
@@ -60,7 +67,10 @@ export default function PaymentMethods({ methods }: { methods: PaymentMethod[] }
           ))}
         </ul>
       )}
-      <form
+      <EditorForm
+        busy={operation.pending}
+        dirty={dirty}
+        onChangeCapture={operation.clear}
         className="stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -95,7 +105,7 @@ export default function PaymentMethods({ methods }: { methods: PaymentMethod[] }
         </label>
         <OperationFeedback error={operation.error} success={operation.success} />
         <div className="actions">
-          <button className="button" disabled={operation.pending}>
+          <button className="button" disabled={operation.pending || !dirty || !name.trim()}>
             {operation.pending ? 'Guardando…' : 'Guardar método'}
           </button>
           {editing ? (
@@ -104,7 +114,7 @@ export default function PaymentMethods({ methods }: { methods: PaymentMethod[] }
             </button>
           ) : null}
         </div>
-      </form>
+      </EditorForm>
     </section>
   );
 }

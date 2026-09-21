@@ -23,7 +23,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./tests/setup.ts'],
-      exclude: ['node_modules/**', 'e2e/**', 'dist/**'],
+      include: ['tests/**/*.test.{ts,tsx,mjs}'],
+      exclude: ['node_modules/**', 'e2e/**', 'dist/**', '.local/**'],
     },
     build: { target: 'es2020' },
   };

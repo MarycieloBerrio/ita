@@ -130,6 +130,7 @@ async function main() {
   checkpoint('visita múltiple y reconstrucción del plano');
   const person = await cmd(owner, 'client.save', {
     name: `[PRUEBA] Clienta ${tag}`,
+    consent: 'client-notice-v1',
     birth_day: 29,
     birth_month: 2,
   });

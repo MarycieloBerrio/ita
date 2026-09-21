@@ -1,3 +1,4 @@
+import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,6 +7,8 @@ import { useOperation } from '../../lib/useOperation';
 import { useTypedQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useDeferredValue } from 'react';
+// Keep this marker in sync with the notice and the client-consent migration.
+const CLIENT_NOTICE_VERSION = 'client-notice-v1';
 const optionalInteger = z.preprocess(
   (v) => (v === '' || v == null ? null : Number(v)),
   z.number().int().nullable(),
@@ -18,7 +21,7 @@ const clientSchema = z
     birth_month: optionalInteger,
     birth_year: optionalInteger,
     notes: z.string().max(10000),
-    consent: z.string().max(2000),
+    consent_confirmed: z.boolean().refine(Boolean, 'Confirma la autorización antes de guardar.'),
     active: z.boolean(),
   })
   .superRefine((v, c) => {
@@ -60,7 +63,10 @@ export default function ClientEditor({
   onSaved: (id: string) => void;
   onCancel: () => void;
 }) {
-  const { profile } = useAuth();
+  const { profile, bootstrap } = useAuth();
+  const responsible = bootstrap?.settings.responsible_name.trim() ?? '';
+  const contact = bootstrap?.settings.responsible_contact.trim() ?? '';
+  const noticeReady = Boolean(responsible && contact);
   const operation = useOperation();
   const {
     register,
@@ -76,7 +82,7 @@ export default function ClientEditor({
       birth_month: client?.birth_month ?? null,
       birth_year: client?.birth_year ?? null,
       notes: client?.notes ?? '',
-      consent: client?.consent ?? '',
+      consent_confirmed: Boolean(client),
       active: client?.active ?? true,
     },
   });
@@ -88,15 +94,23 @@ export default function ClientEditor({
   const existingPhone = useTypedQuery('clients', { search: searchPhone, limit: 5, offset: 0 });
   const submit = handleSubmit(async (values) => {
     const parsed = clientSchema.parse(values);
+    const { consent_confirmed, ...clientValues } = parsed;
     const result = await operation.run('client.save', {
-      ...parsed,
+      ...clientValues,
       ...(client ? { id: client.id, version: client.version } : {}),
       phone: parsed.phone || null,
+      consent: client?.consent ?? (consent_confirmed ? CLIENT_NOTICE_VERSION : ''),
     });
     if (result?.id) onSaved(String(result.id));
   });
   return (
-    <form onSubmit={(e) => void submit(e)} className="stack">
+    <EditorForm
+      busy={operation.pending}
+      dirty={isDirty}
+      onChangeCapture={operation.clear}
+      onSubmit={(e) => void submit(e)}
+      className="stack"
+    >
       <div className="section-title">
         <h2>{client ? 'Datos de la clienta' : 'Nueva clienta'}</h2>
         <span className="badge">{isDirty ? 'Cambios pendientes' : 'Datos personales'}</span>
@@ -166,17 +180,66 @@ export default function ClientEditor({
           placeholder="Preferencias y observaciones para su atención"
         />
       </label>
-      <label className="field">
-        Constancia de autorización de datos
-        <textarea
-          {...register('consent')}
-          placeholder="Registra fecha, medio y versión del texto autorizado, cuando proceda."
-        />
-        <small>
-          El cumpleaños es voluntario. Revisa el texto de tratamiento de datos configurado por la
-          responsable antes de usar información real.
-        </small>
-      </label>
+      {!client ? (
+        <section
+          className="notice stack client-consent-notice"
+          aria-labelledby="client-privacy-title"
+        >
+          <h3 id="client-privacy-title">Autorización de tratamiento de datos personales</h3>
+          {noticeReady ? (
+            <>
+              <p>
+                <strong>Responsable:</strong> {responsible}. <strong>Contacto:</strong> {contact}.
+              </p>
+              <p>
+                Se registran nombre y, si la clienta los facilita, teléfono y cumpleaños. También se
+                conservan citas, servicios, productos, pagos y observaciones necesarias para su
+                atención. Se usan para programar y prestar servicios, mantener el historial de
+                atención, gestionar cobros y cumplir obligaciones aplicables. El cumpleaños es
+                opcional. Estos datos no se usarán para publicidad sin una autorización separada.
+              </p>
+              <p>
+                La clienta puede conocer, actualizar o rectificar sus datos, solicitar su supresión,
+                revocar la autorización cuando proceda y pedir constancia de ella. Puede dirigir sus
+                solicitudes y pedir una copia de este aviso al contacto indicado. No está obligada a
+                responder preguntas sobre datos sensibles o de menores de edad; si fueran
+                necesarios, se explicará su finalidad y se solicitará una autorización específica.
+              </p>
+              <p className="muted">
+                Explica el aviso antes de registrar los datos. La autorización debe ser expresa; el
+                silencio no equivale a aceptación.
+              </p>
+              <label className="checkbox-line client-consent-confirmation">
+                <input type="checkbox" {...register('consent_confirmed')} />
+                <span>
+                  Confirmo que informé este aviso y recibí autorización expresa de la clienta antes
+                  de guardar sus datos. La clienta puede consultar la{' '}
+                  <a href="/privacidad" target="_blank" rel="noopener noreferrer">
+                    política de tratamiento de datos personales
+                  </a>
+                  .
+                </span>
+              </label>
+              <small className="muted">
+                Esta casilla deja constancia de quien registra; no reemplaza la respuesta de la
+                clienta.
+              </small>
+              {errors.consent_confirmed && (
+                <small className="field-error" role="alert">
+                  {String(errors.consent_confirmed.message)}
+                </small>
+              )}
+            </>
+          ) : (
+            <p className="error" role="alert">
+              Completa el nombre y el contacto de la responsable en Ajustes antes de registrar
+              clientas.
+            </p>
+          )}
+        </section>
+      ) : (
+        <p className="muted">Constancia de autorización: {client.consent || 'Sin registrar.'}</p>
+      )}
       {client && profile?.role === 'owner' && (
         <label className="checkbox-line">
           <input type="checkbox" {...register('active')} />
@@ -189,7 +252,11 @@ export default function ClientEditor({
         </p>
       )}
       <div className="actions">
-        <button type="submit" className="button" disabled={operation.pending}>
+        <button
+          type="submit"
+          className="button"
+          disabled={operation.pending || (!client && !noticeReady)}
+        >
           {operation.pending ? 'Guardando…' : 'Guardar clienta'}
         </button>
         <button
@@ -206,6 +273,6 @@ export default function ClientEditor({
           Cancelar
         </button>
       </div>
-    </form>
+    </EditorForm>
   );
 }

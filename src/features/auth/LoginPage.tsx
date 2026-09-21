@@ -86,6 +86,9 @@ export default function LoginPage() {
             Si necesitas recuperar tu acceso, comunícate con la responsable del salón para verificar
             tu identidad.
           </p>
+          <p className="small">
+            <a href="/privacidad">Política de tratamiento de datos personales</a>
+          </p>
           <div className="login-private">
             <LockKeyhole size={16} /> Acceso privado
           </div>
