@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/auth';
 
 const schema = z
   .object({
+    current: z.string().max(128, 'Usa hasta 128 caracteres.').optional(),
     password: z
       .string()
       .min(12, 'Usa al menos 12 caracteres.')
@@ -19,7 +20,7 @@ const schema = z
   });
 
 export default function PasswordPage() {
-  const { profile, online, signOut } = useAuth();
+  const { profile, online, signOut, recovering, endRecovery } = useAuth();
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const {
@@ -28,23 +29,47 @@ export default function PasswordPage() {
     reset,
     formState: { errors, isSubmitting },
   } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
-  const submit = handleSubmit(async ({ password }) => {
+  const submit = handleSubmit(async ({ current, password }) => {
     setError('');
     setSaved(false);
     if (!online) {
       setError('Necesitas conexión para cambiar tu contraseña.');
       return;
     }
+    if (!recovering && !current) {
+      setError('Escribe tu contraseña actual para confirmar que eres tú.');
+      return;
+    }
+    const auth = requireSupabase().auth;
     try {
-      const result = await requireSupabase().auth.updateUser({ password });
+      if (!recovering) {
+        // An unlocked, signed-in device must not be enough to take over the account.
+        const { data } = await auth.getUser();
+        const email = data.user?.email;
+        if (!email) throw new Error('missing email');
+        const check = await auth.signInWithPassword({ email, password: current ?? '' });
+        if (check.error) {
+          setError('La contraseña actual no es correcta.');
+          return;
+        }
+      }
+      const result = await auth.updateUser({ password });
       if (result.error) throw result.error;
+      endRecovery();
       reset();
       setSaved(true);
     } catch {
       setError(
         'No se confirmó el cambio. Revisa la conexión y prueba una contraseña diferente. Si tu sesión ha vencido, solicita recuperar el acceso.',
       );
+      return;
     }
+    // Other devices signed in with the old password lose their sessions.
+    const others = await auth.signOut({ scope: 'others' }).catch(() => ({ error: true }));
+    if (others.error)
+      setError(
+        'La contraseña cambió, pero no se confirmó el cierre de las demás sesiones. Ciérralas manualmente en esos dispositivos.',
+      );
   });
   return (
     <div className="stack">
@@ -61,6 +86,13 @@ export default function PasswordPage() {
           recordar.
         </p>
         <form className="stack" onSubmit={(event) => void submit(event)}>
+          {!recovering && (
+            <label className="field">
+              Contraseña actual
+              <input type="password" autoComplete="current-password" {...register('current')} />
+              {errors.current && <small className="field-error">{errors.current.message}</small>}
+            </label>
+          )}
           <label className="field">
             Nueva contraseña
             <input type="password" autoComplete="new-password" {...register('password')} />
