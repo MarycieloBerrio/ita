@@ -79,7 +79,7 @@ export default function InventoryPage() {
       </header>
       <QueryFeedback pending={request.isPending} error={request.error} retry={request.refetch} />
       {owner ? (
-        <nav className="operation-tabs" aria-label="Inventario">
+        <nav className="operation-tabs" aria-label="Secciones de inventario">
           {(
             [
               { id: 'products', label: 'Productos' },
@@ -90,6 +90,8 @@ export default function InventoryPage() {
           ).map((item) => (
             <button
               key={item.id}
+              type="button"
+              aria-pressed={tab === item.id}
               className={tab === item.id ? 'button' : 'button-secondary'}
               onClick={() => setTab(item.id)}
             >
@@ -163,7 +165,9 @@ export default function InventoryPage() {
                       </td>
                       <td title={movement.created_by}>{movement.created_by.slice(0, 8)}</td>
                       <td>
-                        {!movements.some((item) => item.correction_of === movement.id) ? (
+                        {movement.kind === 'sale' || movement.sale_id ? (
+                          <small>Se gestiona desde su venta confirmada</small>
+                        ) : !movements.some((item) => item.correction_of === movement.id) ? (
                           <button
                             className="button-secondary"
                             onClick={() => setStockEditor({ correction: movement })}

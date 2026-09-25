@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 export async function verifyIntegrity(db, fixture) {
   const { owner, worker, client, cat, general, color, product, method } = fixture;
   let checks = 0;
+  const dbNow = async () => (await db.query('select clock_timestamp()::text t')).rows[0].t;
   const check = (actual, expected, message) => {
     assert.deepEqual(actual, expected, message);
     checks++;
@@ -349,7 +350,7 @@ export async function verifyIntegrity(db, fixture) {
       account_id: batch.account_id,
       amount: 100,
       method_id: method.id,
-      paid_at: new Date().toISOString(),
+      paid_at: await dbNow(),
     });
     b = await get('visit', { id: batch.id });
     await denied(
@@ -377,7 +378,7 @@ export async function verifyIntegrity(db, fixture) {
       category: 'Productos',
       amount: 7000,
       method_id: method.id,
-      paid_at: new Date().toISOString(),
+      paid_at: await dbNow(),
       stock_movement_id: purchase.id,
     };
     const expense = await cmd('expense.save', expenseData);
@@ -416,8 +417,10 @@ export async function verifyIntegrity(db, fixture) {
       archived.id,
       'Owner can find archived client',
     );
+    // Birthday month of the archived client (12 September) in the database's current year.
+    const year = (await get('bootstrap')).server_date.slice(0, 4);
     check(
-      (await get('birthdays', { from: '2026-09-01', to: '2026-09-30' })).events.some(
+      (await get('birthdays', { from: `${year}-09-01`, to: `${year}-09-30` })).events.some(
         (c) => c.id === archived.id,
       ),
       false,

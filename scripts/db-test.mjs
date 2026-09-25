@@ -33,14 +33,21 @@ async function run() {
     const owner = randomUUID(),
       worker = randomUUID(),
       outsider = randomUUID();
-    const thisYear = new Date().getUTCFullYear();
-    const financeRange = { from: `${thisYear}-01-01`, to: `${thisYear}-12-31` };
+    // Payments below are dated now(); derive the range from the database clock in Bogota
+    // so the suite never depends on the runner's UTC date (e.g. 00:00-05:00 UTC on Jan 1).
+    const financeRange = (
+      await db.query(
+        'select ((now() at time zone \'America/Bogota\')::date - 1)::text "from", ((now() at time zone \'America/Bogota\')::date + 1)::text "to"',
+      )
+    ).rows[0];
     await db.query(`insert into auth.users(id) values($1),($2),($3)`, [owner, worker, outsider]);
     await db.query(
       `insert into ita_private.profiles(id,display_name,role) values($1,'Dueña ficticia','owner'),($2,'Trabajadora ficticia','worker')`,
       [owner, worker],
     );
     let checks = 0;
+    // Payment dates come from the database clock; a container clock may differ from the host.
+    const dbNow = async () => (await db.query('select clock_timestamp()::text t')).rows[0].t;
     const check = (condition, message) => {
       assert.ok(condition, message);
       checks++;
@@ -279,7 +286,7 @@ async function run() {
           account_id: workerVisit.account_id,
           amount: 100000,
           method_id: method.id,
-          paid_at: new Date().toISOString(),
+          paid_at: await dbNow(),
         };
       const first = await command('payment.record', payment, key),
         second = await command('payment.record', payment, key);
@@ -302,7 +309,7 @@ async function run() {
       await command('payment.record', {
         ...payment,
         amount: 130000,
-        paid_at: new Date().toISOString(),
+        paid_at: await dbNow(),
       });
       detail = await query('visit', { id: workerVisit.id });
       check(
@@ -386,7 +393,7 @@ async function run() {
         account_id: standalone.id,
         amount: 15000,
         method_id: method.id,
-        paid_at: new Date().toISOString(),
+        paid_at: await dbNow(),
       });
       check((await query('inventory')).products[0].stock === 0, 'Paying sale does not move again');
       const corr = await command('inventory.correct', {
@@ -528,6 +535,9 @@ async function run() {
       await import('./db-integrity.mjs')
     ).verifyIntegrity(db, { owner, worker, client, cat, general, color, product, method });
     checks += await (await import('./db-export.mjs')).verifyExports(db, { owner, worker, color });
+    checks += await (
+      await import('./db-ledger.mjs')
+    ).verifyLedger(db, { owner, worker, client, general, color, product, method });
     if (db.connect)
       checks += await (
         await import('./db-concurrency.mjs')
