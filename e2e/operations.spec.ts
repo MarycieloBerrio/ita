@@ -172,6 +172,8 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
     account_id: account.id,
     method_id: method.id,
     amount: 10000,
+    // Must track the real clock: PostgreSQL rejects payments before the sale or in the future,
+    // and the cash session opened below must start after this payment.
     paid_at: new Date().toISOString(),
   });
   await sql.login(page, 'owner');
@@ -192,7 +194,7 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
 
   await page.getByRole('link', { name: 'Finanzas', exact: true }).click();
   await page.locator('summary').filter({ hasText: 'Pagos y rectificaciones' }).click();
-  await page.getByRole('button', { name: 'Rectificar error', exact: true }).click();
+  await page.getByRole('button', { name: /^Rectificar error del pago/ }).click();
   await page.getByLabel('Importe', { exact: true }).fill('9000');
   await page.getByLabel('Motivo de la rectificación').fill('Error al digitar importe');
   await page.getByRole('button', { name: 'Confirmar rectificación', exact: true }).click();
@@ -247,6 +249,7 @@ test('dueña rectifica stock y pago; egreso y cierre concilian sin duplicar comp
       category: 'Aseo',
       amount: 2000,
       method_id: method.id,
+      // Inside the open cash session so the rejection is the duplicate purchase, not the date.
       paid_at: new Date().toISOString(),
       stock_movement_id: purchase.id,
     }),

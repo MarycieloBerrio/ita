@@ -1,78 +1,111 @@
-import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { encryptFile } from './backup-crypto.mjs';
+import { parseRecoveryKey } from './backup-crypto.mjs';
 import {
-  BUNDLE_FILES,
+  LOCAL_HOSTS,
   PROJECT_REF,
-  SQL_FILES,
+  excludedDataFlags,
   postgresEnv,
   run,
-  sha256,
+  safeErrorSummary,
   temporaryWork,
+  tlsSettings,
+  writeEncryptedBundle,
 } from './backup-common.mjs';
+import { executeNativeDump, supabaseCli } from './backup-native.mjs';
 import { prepareRetention } from './backup-retention.mjs';
 
-export async function createBackup(output, connection, recoveryKey) {
-  const url = new URL(connection);
+// Supabase's documented backup split: roles, schema (platform schemas excluded), data via COPY
+// (Auth identities included, ephemeral Auth tables excluded) and migration history.
+export const SCHEDULED_DUMPS = [
+  ['roles.sql', '--role-only'],
+  ['schema.sql'],
+  ['data.sql', '--use-copy', '--data-only', ...excludedDataFlags()],
+  ['history_schema.sql', '--schema', 'supabase_migrations'],
+  ['history_data.sql', '--use-copy', '--data-only', '--schema', 'supabase_migrations'],
+];
+
+export function assertProjectSource(connection) {
+  let url;
+  try {
+    url = new URL(connection);
+  } catch {
+    throw new Error('DATABASE_URL_REQUIRED');
+  }
   const isDirect = url.hostname === `db.${PROJECT_REF}.supabase.co`;
   const isPooler =
     url.hostname.endsWith('.pooler.supabase.com') &&
     decodeURIComponent(url.username) === `postgres.${PROJECT_REF}`;
   if (!isDirect && !isPooler) throw new Error('UNEXPECTED_SOURCE_PROJECT');
-  if (!recoveryKey || Buffer.byteLength(recoveryKey) < 32)
-    throw new Error('RECOVERY_KEY_REQUIRED_32_BYTES');
+  return url;
+}
+
+/**
+ * The CLI only generates the pg_dump script (--dry-run); native PostgreSQL tools execute it so
+ * TLS verification (verify-full + CA) is under our control instead of a Docker container's.
+ * `adaptScript` exists solely for the local CI fixture (e.g. its administrator is not `postgres`).
+ */
+export async function cliDump(
+  connection,
+  file,
+  flags,
+  directory,
+  adaptScript = (script) => script,
+) {
+  const [command, args] = supabaseCli([
+    'db',
+    'dump',
+    '--db-url',
+    connection,
+    '--dry-run',
+    ...flags,
+  ]);
+  let script;
+  try {
+    script = await run(command, args);
+  } catch {
+    throw new Error(`CLI_DUMP_SCRIPT_FAILED_${file.replace('.', '_').toUpperCase()}`);
+  }
+  // The CLI prints a banner before the script; keep only the script itself.
+  const start = script.indexOf('#!/usr/bin/env bash');
+  if (start < 0) throw new Error('UNEXPECTED_CLI_DUMP_SCRIPT');
+  try {
+    await executeNativeDump(`${adaptScript(script.slice(start), file)}\n`, join(directory, file));
+  } catch (error) {
+    if (/^(TLS_|NATIVE_BACKUP_TOOLS|UNEXPECTED_CLI)/.test(error.message)) throw error;
+    throw new Error(`NATIVE_DUMP_FAILED_${file.replace('.', '_').toUpperCase()}`);
+  }
+}
+
+/**
+ * Creates an encrypted bundle. The scheduled job always validates the source project. The local
+ * restore test passes `localTestSource: true` (loopback only) to exercise this same code path.
+ */
+export async function createBackup(
+  output,
+  connection,
+  recoveryKey,
+  { localTestSource = false, adaptScript, dump = cliDump } = {},
+) {
+  parseRecoveryKey(recoveryKey);
+  let url;
+  if (localTestSource) {
+    url = new URL(connection);
+    if (!LOCAL_HOSTS.includes(url.hostname)) throw new Error('LOCAL_TEST_SOURCE_MUST_BE_LOOPBACK');
+  } else url = assertProjectSource(connection);
+  tlsSettings(url.hostname); // Fail closed before running any tool without a CA for remote hosts.
   const started = new Date().toISOString();
   return temporaryWork(async (directory) => {
-    const commands = [
-      ['roles.sql', '--role-only'],
-      ['schema.sql'],
-      [
-        'data.sql',
-        '--use-copy',
-        '--data-only',
-        '-x',
-        'storage.buckets_vectors',
-        '-x',
-        'storage.vector_indexes',
-      ],
-      ['history_schema.sql', '--schema', 'supabase_migrations'],
-      ['history_data.sql', '--use-copy', '--data-only', '--schema', 'supabase_migrations'],
-    ];
-    for (const [file, ...flags] of commands)
-      await run('supabase', [
-        'db',
-        'dump',
-        '--db-url',
-        connection,
-        '-f',
-        join(directory, file),
-        ...flags,
-      ]);
-    const files = {};
-    for (const file of SQL_FILES)
-      files[file] = {
-        bytes: (await stat(join(directory, file))).size,
-        sha256: await sha256(join(directory, file)),
-      };
-    if (!files['schema.sql'].bytes || !files['data.sql'].bytes) throw new Error('EMPTY_BACKUP');
-    await writeFile(
-      join(directory, 'manifest.json'),
-      JSON.stringify({
-        format: 1,
-        project: PROJECT_REF,
-        started_at: started,
-        completed_at: new Date().toISOString(),
-        commit: process.env.GITHUB_SHA || null,
-        auth: 'Auth data included by Supabase CLI; destination requires compatible managed Auth schema and configuration.',
-        files,
-      }),
-      { mode: 0o600 },
-    );
-    const archive = join(directory, 'bundle.tar');
-    await run('tar', ['-cf', archive, ...BUNDLE_FILES], { cwd: directory });
-    await encryptFile(archive, output, recoveryKey);
-    return { bytes: (await stat(output)).size, sha256: await sha256(output) };
+    for (const [file, ...flags] of SCHEDULED_DUMPS)
+      await dump(connection, file, flags, directory, adaptScript);
+    return writeEncryptedBundle(directory, output, recoveryKey, {
+      project: localTestSource ? 'local-fictional-fixture' : PROJECT_REF,
+      started_at: started,
+      commit: process.env.GITHUB_SHA || null,
+      method: 'Supabase CLI 2.117.0 dry-run executed by native PostgreSQL tools',
+      auth: 'Auth identity data included by Supabase CLI (sessions/tokens excluded); destination requires compatible managed Auth schema and configuration.',
+    });
   });
 }
 
@@ -97,6 +130,7 @@ async function main() {
   if (process.argv[2] !== 'create') throw new Error('USE_BACKUP_CREATE_OR_STATUS');
   const name = `ita-backup-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
   if (!/^ita-backup-\d{8}-\d+-\d+$/.test(name)) throw new Error('GITHUB_RUN_REQUIRED');
+  if (!process.env.RUNNER_TEMP) throw new Error('RUNNER_TEMP_REQUIRED');
   const directory = resolve(process.env.RUNNER_TEMP, 'ita-encrypted-output');
   await mkdir(directory, { recursive: true });
   const file = join(directory, `${name}.ita.enc`);
@@ -113,9 +147,10 @@ async function main() {
   console.log(`BACKUP_ENCRYPTED bytes=${result.bytes} sha256=${result.sha256}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
-  main().catch(() => {
+  main().catch((error) => {
+    // Only a classified code is printed: tool output may contain connection strings or rows.
     console.error(
-      'BACKUP_FAILED: revisar credenciales, herramientas, conexión o cuota. No se muestran datos del volcado.',
+      `BACKUP_FAILED ${safeErrorSummary(error, process.argv[2] === 'status' ? `status-${process.argv[3]}` : 'create')}. No se muestran datos del volcado ni credenciales.`,
     );
     process.exitCode = 1;
   });

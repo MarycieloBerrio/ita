@@ -3,11 +3,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { decryptFile, encryptFile } from '../scripts/backup-crypto.mjs';
-import { postgresEnv } from '../scripts/backup-common.mjs';
+import { createCipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
+import { decryptFile, encryptFile, parseRecoveryKey } from '../scripts/backup-crypto.mjs';
+import { EXCLUDED_DATA_TABLES, postgresEnv, safeErrorSummary } from '../scripts/backup-common.mjs';
+import { SCHEDULED_DUMPS } from '../scripts/backup.mjs';
 import { retentionPlan } from '../scripts/backup-retention.mjs';
 
-const password = 'ficticia-solo-pruebas-no-es-clave-real-123456789';
+// Fictional v2 key: base64 of 32 random bytes. Never a real recovery key.
+const password = 'bpycnAu/dlnunST4xSqwdLSBZqb+LtlSp/Oi3pwH9/g=';
+const legacyPassword = 'ficticia-solo-pruebas-no-es-clave-real-123456789';
 const directories = [];
 async function paths() {
   const dir = await mkdtemp(join(tmpdir(), 'ita-backup-test-'));
@@ -48,6 +53,40 @@ describe('respaldo cifrado', () => {
       await expect(stat(restored)).rejects.toThrow();
     },
   );
+  it('exige clave base64 de 32 bytes aleatorios y rechaza frases o patrones', async () => {
+    expect(parseRecoveryKey(password)).toHaveLength(32);
+    expect(parseRecoveryKey(randomBytes(32).toString('base64url'))).toHaveLength(32);
+    for (const weak of [
+      legacyPassword,
+      'x'.repeat(64),
+      Buffer.alloc(32).toString('base64'),
+      Buffer.alloc(32, 'ab').toString('base64'),
+      randomBytes(31).toString('base64'),
+      randomBytes(33).toString('base64'),
+      undefined,
+    ])
+      expect(() => parseRecoveryKey(weak)).toThrow(/RECOVERY_KEY/);
+    const [plain, encrypted] = await paths();
+    await writeFile(plain, 'dato');
+    await expect(encryptFile(plain, encrypted, legacyPassword)).rejects.toThrow(/RECOVERY_KEY/);
+  });
+  it('descifra copias v1 existentes (frase + scrypt) y escribe siempre v2', async () => {
+    const [plain, encrypted, restored] = await paths();
+    const data = Buffer.from('copia heredada ficticia');
+    const salt = randomBytes(32),
+      nonce = randomBytes(12);
+    const header = Buffer.concat([Buffer.from('ITABKP01'), salt, nonce]);
+    const key = scryptSync(legacyPassword, salt, 32, { N: 32768, r: 8, p: 1, maxmem: 64 << 20 });
+    const cipher = createCipheriv('aes-256-gcm', key, nonce).setAAD(header);
+    const body = Buffer.concat([cipher.update(gzipSync(data)), cipher.final()]);
+    await writeFile(encrypted, Buffer.concat([header, body, cipher.getAuthTag()]));
+    await decryptFile(encrypted, restored, legacyPassword);
+    expect(await readFile(restored)).toEqual(data);
+    await rm(encrypted);
+    await writeFile(plain, data);
+    await encryptFile(plain, encrypted, password);
+    expect((await readFile(encrypted)).subarray(0, 8).toString()).toBe('ITABKP02');
+  });
   it('no sobrescribe ni borra archivos previos y limita descompresión', async () => {
     const [plain, encrypted, restored] = await paths();
     await writeFile(plain, 'x'.repeat(1024));
@@ -61,7 +100,50 @@ describe('respaldo cifrado', () => {
   });
 });
 
+describe('alcance y diagnóstico', () => {
+  it('excluye sesiones y tokens Auth pero conserva identidades', () => {
+    const data = SCHEDULED_DUMPS.find(([name]) => name === 'data.sql');
+    for (const table of ['auth.sessions', 'auth.refresh_tokens', 'auth.one_time_tokens'])
+      expect(data).toContain(table);
+    expect(EXCLUDED_DATA_TABLES).not.toContain('auth.users');
+    expect(EXCLUDED_DATA_TABLES).not.toContain('auth.identities');
+  });
+  it('resume errores sin mensajes de herramientas', () => {
+    expect(safeErrorSummary(new Error('BACKUP_TOOL_FAILED_PSQL_2'), 'create')).toBe(
+      'step=create code=BACKUP_TOOL_FAILED_PSQL_2 system=- type=Error',
+    );
+    const leaked = safeErrorSummary(
+      new Error('connection to postgresql://postgres:secreto@db.example/postgres failed'),
+      'create',
+    );
+    expect(leaked).not.toContain('secreto');
+    expect(leaked).toContain('code=UNCLASSIFIED');
+  });
+});
+
 describe('destino y cuota', () => {
+  it('exige verificación TLS con CA para bases remotas', () => {
+    const remote = 'postgresql://postgres:x@db.mrnzvgivfjivuobpgens.supabase.co:5432/postgres';
+    const previous = { ...process.env };
+    try {
+      delete process.env.ITA_PG_SSLROOTCERT;
+      delete process.env.ITA_PG_ALLOW_UNVERIFIED_TLS;
+      expect(() => postgresEnv(remote)).toThrow('TLS_CA_REQUIRED_FOR_REMOTE_DATABASE');
+      process.env.ITA_PG_SSLROOTCERT = join(tmpdir(), 'ita-no-such-ca.crt');
+      expect(() => postgresEnv(remote)).toThrow('TLS_CA_FILE_NOT_FOUND');
+      process.env.ITA_PG_SSLROOTCERT = process.execPath; // Any existing absolute file.
+      expect(postgresEnv(remote)).toMatchObject({
+        PGSSLMODE: 'verify-full',
+        PGSSLROOTCERT: process.execPath,
+      });
+      delete process.env.ITA_PG_SSLROOTCERT;
+      process.env.ITA_PG_ALLOW_UNVERIFIED_TLS = 'true';
+      expect(postgresEnv(remote).PGSSLMODE).toBe('require');
+      expect(postgresEnv('postgresql://u:p@127.0.0.1:55433/postgres').PGSSLMODE).toBe('disable');
+    } finally {
+      process.env = previous;
+    }
+  });
   it('rechaza producción, otro nombre y bases administrativas', () => {
     for (const url of [
       'postgresql://postgres@db.mrnzvgivfjivuobpgens.supabase.co/postgres',

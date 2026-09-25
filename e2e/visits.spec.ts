@@ -101,7 +101,11 @@ test('agenda usa Bogotá con dispositivo de otra zona y oculta citas ajenas', as
     name: 'Cita ficticia',
     consent: 'client-notice-v1',
   });
-  const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  // Freeze the browser clock at the instant that defines "today", so a run crossing midnight in
+  // Bogotá cannot make the agenda open on a different day than the appointments below.
+  const now = new Date();
+  await page.clock.setFixedTime(now);
+  const date = now.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   await sql.command('owner', 'appointment.save', {
     client_id: client.id,
     professional_id: sql.ids.worker,
