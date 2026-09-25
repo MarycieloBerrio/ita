@@ -1,12 +1,3 @@
-import { useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { ApiError, command } from '../../lib/api';
-import {
-  findOperationRetry,
-  getCompletedOperation,
-  operationSignature,
-} from '../../lib/pendingOperations';
-
 export type { Category } from '../../lib/contracts';
 import type { Category } from '../../lib/contracts';
 
@@ -68,92 +59,8 @@ export function categoryContains(
   return false;
 }
 
-/** A failed transport keeps its operation key, so an identical retry cannot duplicate a movement. */
-export function useOperation() {
-  const client = useQueryClient();
-  const busy = useRef(false);
-  const last = useRef<{ signature: string; id: string; payload: Record<string, unknown> } | null>(
-    null,
-  );
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  async function run<T>(
-    action: string,
-    payload: Record<string, unknown>,
-    message = 'Guardado confirmado',
-  ): Promise<T | undefined> {
-    if (busy.current) return undefined;
-    setSuccess('');
-    if (!navigator.onLine) {
-      setError(
-        'Sin conexión. Conservamos lo escrito en esta pestaña; vuelve a intentar cuando tengas Internet.',
-      );
-      return undefined;
-    }
-    const signature = operationSignature(action, payload);
-    if (
-      last.current &&
-      getCompletedOperation(last.current.id) &&
-      last.current.signature !== signature
-    )
-      last.current = null;
-    if (last.current && last.current.signature !== signature) {
-      setError(
-        'Hay una confirmación incierta. Reintenta primero con los mismos datos de la operación anterior para comprobar su resultado.',
-      );
-      return undefined;
-    }
-    last.current ??= {
-      signature,
-      id: findOperationRetry(action, payload) ?? crypto.randomUUID(),
-      payload: structuredClone(payload),
-    };
-    busy.current = true;
-    setPending(true);
-    setError('');
-    setSuccess('');
-    try {
-      const result = await command<T>(action, last.current.payload, last.current.id);
-      last.current = null;
-      await client.invalidateQueries();
-      setSuccess(message);
-      return result;
-    } catch (cause) {
-      // Only an explicit database rejection proves that the transaction was rolled back.
-      // Transport/proxy errors and connection exception codes leave confirmation uncertain.
-      if (
-        cause instanceof ApiError &&
-        (/^(?:22|23|28|40|42|P0)[A-Z0-9]{3}$/.test(cause.code ?? '') ||
-          ['OPERATION_PENDING', 'AUTH_REQUIRED', 'AUTH_CHANGED'].includes(cause.code ?? ''))
-      )
-        last.current = null;
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'No se pudo confirmar. Reintenta la misma operación para comprobar su resultado.',
-      );
-      return undefined;
-    } finally {
-      busy.current = false;
-      setPending(false);
-    }
-  }
-  return {
-    run,
-    pending,
-    error,
-    success,
-    setError: (message: string) => {
-      setSuccess('');
-      setError(message);
-    },
-    clear: () => {
-      setError('');
-      setSuccess('');
-    },
-  };
-}
+/** Single implementation lives in src/lib; re-exported so catalog-era importers keep working. */
+export { useOperation } from '../../lib/useOperation';
 
 export function OperationFeedback({ error, success }: { error?: string; success?: string }) {
   return (

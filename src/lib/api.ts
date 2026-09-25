@@ -12,6 +12,7 @@ import {
   markOperationUncertain,
   operationSignature,
 } from './pendingOperations';
+import { isDefiniteRejectionCode } from './operationErrors';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 10_000, gcTime: 60_000, retry: 1, refetchOnWindowFocus: 'always' },
@@ -115,7 +116,7 @@ export async function command<T>(
   }
 }
 export function isDefiniteRejection(cause: unknown): cause is ApiError {
-  return cause instanceof ApiError && /^(?:22|23|28|40|42|P0)[A-Z0-9]{3}$/.test(cause.code ?? '');
+  return cause instanceof ApiError && isDefiniteRejectionCode(cause.code);
 }
 export async function checkPendingOperation(id: string): Promise<boolean> {
   if (!navigator.onLine)

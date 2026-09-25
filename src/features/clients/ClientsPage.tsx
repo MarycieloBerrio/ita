@@ -34,7 +34,7 @@ export default function ClientsPage() {
         <div className="card">
           <ClientEditor
             onCancel={() => setCreate(false)}
-            onSaved={(id) => navigate(`/clientas/${id}`)}
+            onSaved={(id) => void navigate(`/clientas/${id}`)}
           />
         </div>
       ) : (

@@ -6,7 +6,9 @@ import { validateTechnicalCompletion } from '../technical/types';
 import { Loading, Saved } from '../../components/Feedback';
 import { ActionButton } from '../../components/ActionButton';
 import { useTechnicalDraft } from './useTechnicalDraft';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 const TechnicalForm = lazy(() => import('../technical/TechnicalForm'));
+const ChargeCorrection = lazy(() => import('./ChargeCorrection'));
 export default function ServiceEditor({
   service,
   sales,
@@ -27,6 +29,9 @@ export default function ServiceEditor({
   const completed = service.status === 'completed';
   const canEdit = !completed || correction;
   const firstValuation = completed && service.price === null;
+  // A completed, valued service changes amount only through charge.correct (owner, reason).
+  const valuedCompletion = completed && service.price !== null;
+  const [chargeOpen, setChargeOpen] = useState(false);
   useEffect(() => {
     // Also handles a save confirmed later through the pending-operation banner.
     // Never close over changes made while the previous request was in flight.
@@ -48,31 +53,8 @@ export default function ServiceEditor({
   useEffect(() => {
     onDirty(unsaved || state.busy);
   }, [unsaved, state.busy, onDirty]);
-  useEffect(() => {
-    if (!unsaved && !state.busy) return;
-    const guard = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    const navigation = (e: MouseEvent) => {
-      const link = (e.target as Element).closest('a[href]');
-      if (
-        link &&
-        !window.confirm(
-          'Hay cambios sin confirmar en esta ficha. ¿Salir y perder lo que no se haya guardado?',
-        )
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener('beforeunload', guard);
-    document.addEventListener('click', navigation, true);
-    return () => {
-      window.removeEventListener('beforeunload', guard);
-      document.removeEventListener('click', navigation, true);
-    };
-  }, [unsaved, state.busy]);
+  // Router blocker + beforeunload, shared with every other editor.
+  useUnsavedChanges(unsaved || state.busy);
   const finalize = async () => {
     const errors = validateTechnicalCompletion(state.draft.technical, sales);
     setCompletionErrors(errors);
@@ -143,7 +125,7 @@ export default function ServiceEditor({
           Precio de esta atención
           {service.price_mode === 'custom' ? (
             <input
-              disabled={!canEdit && !firstValuation}
+              disabled={(!canEdit && !firstValuation) || valuedCompletion}
               type="number"
               min="1"
               step="1"
@@ -156,12 +138,37 @@ export default function ServiceEditor({
             <strong>{money(service.price)}</strong>
           )}
           <small>
-            {service.price_mode === 'custom'
-              ? 'Se define solo para esta atención. Puede quedar pendiente mientras trabajas.'
-              : 'Tarifa fija conservada desde el catálogo.'}
+            {valuedCompletion
+              ? 'El importe de una atención finalizada se cambia con Rectificar importe (solo la dueña, con motivo).'
+              : service.price_mode === 'custom'
+                ? 'Se define solo para esta atención. Puede quedar pendiente mientras trabajas.'
+                : 'Tarifa fija conservada desde el catálogo.'}
           </small>
         </label>
       </div>
+      {valuedCompletion && profile?.role === 'owner' ? (
+        chargeOpen ? (
+          <Suspense fallback={<Loading />}>
+            <ChargeCorrection
+              service={service}
+              version={state.version}
+              onClose={() => setChargeOpen(false)}
+            />
+          </Suspense>
+        ) : (
+          <div className="actions">
+            <button
+              type="button"
+              className="button-secondary"
+              disabled={unsaved || state.busy}
+              title={unsaved ? 'Guarda o descarta los cambios de la ficha primero.' : undefined}
+              onClick={() => setChargeOpen(true)}
+            >
+              Rectificar importe
+            </button>
+          </div>
+        )
+      ) : null}
       {state.error && (
         <div className="stack">
           <p className="error" role="alert">

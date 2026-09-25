@@ -9,6 +9,10 @@ export function csvCell(value: string | number | null | undefined): string {
   return `"${protectedText.replaceAll('"', '""')}"`;
 }
 
+/**
+ * Rectified originals never reach the client (the finance query keeps corrected_by IS NULL), so
+ * every exported cobro/egreso is valid; "Rectifica a" identifies the original a correction replaced.
+ */
 export function financeCsv(report: FinanceResult): string {
   const rows: (string | number | null | undefined)[][] = [
     ['ita · reporte operativo'],
@@ -23,14 +27,15 @@ export function financeCsv(report: FinanceResult): string {
       'Método',
       'Importe',
       'Estado',
-      'Original',
+      'Rectifica a',
     ],
     ...report.charges.map((item) => [
       'Cargo',
       item.id,
       item.account_id,
       item.confirmed_at,
-      `${item.name} / ${item.path}`,
+      // The historical path already ends with the item name.
+      item.path || item.name,
       '',
       item.amount,
       'Confirmado',
@@ -44,7 +49,7 @@ export function financeCsv(report: FinanceResult): string {
       item.reference,
       item.method_name,
       item.amount,
-      item.corrected_by ? 'Rectificado' : 'Válido',
+      'Válido',
       item.correction_of,
     ]),
     ...report.expenses.map((item) => [
@@ -55,7 +60,7 @@ export function financeCsv(report: FinanceResult): string {
       `${item.concept} / ${item.category}`,
       item.method_name,
       item.amount,
-      item.corrected_by ? 'Rectificado' : 'Válido',
+      'Válido',
       item.correction_of,
     ]),
     ...report.accounts.map((item) => [

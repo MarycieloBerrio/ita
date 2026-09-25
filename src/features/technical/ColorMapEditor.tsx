@@ -223,7 +223,10 @@ export function ColorMapEditor({ value, onChange, readOnly = false, onPendingCha
                   type="button"
                   className="ita-icon-button"
                   aria-label={`Ampliar vista ${view.label.toLowerCase()}`}
-                  onClick={() => setExpanded(view.id)}
+                  onClick={() => {
+                    setError('');
+                    setExpanded(view.id);
+                  }}
                 >
                   <Maximize2 size={17} />
                 </button>
@@ -398,6 +401,12 @@ export function ColorMapEditor({ value, onChange, readOnly = false, onPendingCha
             </button>
           </div>
           <p>Selecciona una zona para abrir sus opciones.</p>
+          {error && (
+            // The side panel sits behind the modal; repeat the reason where the user is looking.
+            <p role="alert" className="ita-technical-error">
+              {error}
+            </p>
+          )}
           <HeadView view={expandedView} map={value} selected={selected} onSelect={selectZone} />
         </dialog>
       )}

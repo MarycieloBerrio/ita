@@ -34,11 +34,14 @@ export default function ExpenseEditor({
   purchases,
   correction,
   onClose,
+  onSaved,
 }: {
   methods: PaymentMethod[];
   purchases: StockMovement[];
   correction?: Expense;
   onClose: () => void;
+  /** The editor closes on success, so the host shows the confirmation. */
+  onSaved?: (message: string) => void;
 }) {
   const operation = useOperation();
   const [initialTimestamp] = useState(() => correction?.paid_at ?? new Date().toISOString());
@@ -67,11 +70,14 @@ export default function ExpenseEditor({
         method_id: values.method_id,
         paid_at: paymentTimestamp(values.paid_at, initialTimestamp),
       };
+      const message = correction
+        ? 'Egreso rectificado; original conservado'
+        : 'Egreso pagado confirmado';
       const result = correction
         ? await operation.run(
             'expense.correct',
             { ...payload, id: correction.id, reason: values.reason },
-            'Egreso rectificado; original conservado',
+            message,
           )
         : await operation.run(
             'expense.save',
@@ -79,9 +85,12 @@ export default function ExpenseEditor({
               ...payload,
               ...(values.stock_movement_id ? { stock_movement_id: values.stock_movement_id } : {}),
             },
-            'Egreso pagado confirmado',
+            message,
           );
-      if (result !== undefined) onClose();
+      if (result !== undefined) {
+        onSaved?.(message);
+        onClose();
+      }
     } catch (cause) {
       operation.setError(cause instanceof Error ? cause.message : 'Revisa el egreso.');
     }

@@ -44,7 +44,7 @@ export default function ClientPage() {
             action="visit.create"
             payload={{ client_id: client.id, professional_id: profile?.id }}
             disabled={!client.active || edit}
-            onSuccess={(r) => navigate(`/visitas/${String(r.id ?? r.visit_id)}`)}
+            onSuccess={(r) => void navigate(`/visitas/${String(r.id ?? r.visit_id)}`)}
           >
             <Plus size={17} />
             Iniciar visita

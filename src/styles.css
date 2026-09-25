@@ -194,9 +194,9 @@ small,
   mask: url('/logo.png') center / 130% auto no-repeat;
 }
 .nav-caption {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
-  color: #8b978f;
+  color: #626d64; /* 5.4:1 on the white sidebar */
   margin: 25px 16px 17px;
 }
 .sidebar nav {
@@ -341,7 +341,7 @@ small,
   gap: 10px;
 }
 .muted {
-  color: #7b867d;
+  color: #5f6b62; /* 5.2:1 on cream, 5.6:1 on white */
 }
 .form-grid {
   display: grid;
@@ -536,7 +536,7 @@ tr:last-child td {
   padding: 20px 0;
   border-top: 1px solid #e3e7dd;
   font-family: Georgia, serif;
-  color: #9da599;
+  color: #66716a; /* 4.7:1 on cream */
   display: flex;
   justify-content: space-between;
 }

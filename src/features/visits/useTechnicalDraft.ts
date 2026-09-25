@@ -4,6 +4,7 @@ import type { TechnicalData } from '../technical/types';
 import { technicalDataSchema } from '../technical/types';
 import { ApiError, command, queryClient } from '../../lib/api';
 import { errorMessage } from '../../lib/format';
+import { releasesOperationKey } from '../../lib/operationErrors';
 import {
   acknowledgeOperation,
   findOperationRetry,
@@ -101,13 +102,7 @@ export function useTechnicalDraft(service: VisitService) {
         await queryClient.invalidateQueries({ queryKey: ['visit'] });
         return true;
       } catch (cause) {
-        if (
-          cause instanceof ApiError &&
-          cause.code &&
-          (/^(?:22|23|28|40|42|P0)[A-Z0-9]{3}$/.test(cause.code) ||
-            ['OPERATION_PENDING', 'AUTH_REQUIRED', 'AUTH_CHANGED'].includes(cause.code))
-        )
-          pending.current = null;
+        if (cause instanceof ApiError && releasesOperationKey(cause)) pending.current = null;
         setError(errorMessage(cause));
         return false;
       } finally {
