@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { command } from './api';
 import { releasesOperationKey } from './operationErrors';
 import { findOperationRetry, getCompletedOperation, operationSignature } from './pendingOperations';
+import { cloneJson, createUuid } from './browserCompatibility';
 
 /**
  * Runs one confirmed command per form. A failed transport keeps its operation key, so an
@@ -44,8 +45,8 @@ export function useOperation() {
     }
     last.current ??= {
       signature,
-      id: findOperationRetry(action, payload) ?? crypto.randomUUID(),
-      payload: structuredClone(payload),
+      id: findOperationRetry(action, payload) ?? createUuid(),
+      payload: cloneJson(payload),
     };
     busy.current = true;
     setPending(true);

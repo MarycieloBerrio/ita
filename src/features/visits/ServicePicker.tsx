@@ -7,12 +7,13 @@ import type { Visit } from '../../lib/contracts';
 import { MaterialFields } from '../technical/MaterialFields';
 import type { MaterialGroup } from '../technical/types';
 import { Loading, ErrorState } from '../../components/Feedback';
+import { createUuid } from '../../lib/browserCompatibility';
 export default function ServicePicker({ visit, onClose }: { visit: Visit; onClose: () => void }) {
   const catalog = useTypedQuery('catalog');
   const [selected, setSelected] = useState<string[]>([]);
   const [category, setCategory] = useState('');
   const [batch, setBatch] = useState(false);
-  const [groupId] = useState(() => crypto.randomUUID());
+  const [groupId] = useState(createUuid);
   const [materials, setMaterials] = useState<MaterialGroup>({ none: true, items: [] });
   const [notes, setNotes] = useState('');
   const operation = useOperation();

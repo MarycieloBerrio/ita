@@ -107,6 +107,39 @@ describe('Confirmación de operaciones', () => {
     expect(result.current.success).toBe('');
     expect(result.current.error).toContain('Sin conexión');
   });
+
+  it('guarda aunque el navegador no implemente randomUUID ni structuredClone', async () => {
+    const uuidDescriptor = Object.getOwnPropertyDescriptor(globalThis.crypto, 'randomUUID');
+    const cloneDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'structuredClone');
+    Object.defineProperty(globalThis.crypto, 'randomUUID', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(globalThis, 'structuredClone', {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      request.mockResolvedValue({ id: 'saved' });
+      const { result } = renderHook(useOperation, { wrapper });
+      await act(async () => {
+        await result.current.run('client.save', { name: 'Clienta Huawei' });
+      });
+      expect(request).toHaveBeenCalledWith(
+        'client.save',
+        { name: 'Clienta Huawei' },
+        expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        ),
+      );
+      expect(result.current.success).toBe('Guardado confirmado');
+    } finally {
+      if (uuidDescriptor) Object.defineProperty(globalThis.crypto, 'randomUUID', uuidDescriptor);
+      else delete (globalThis.crypto as unknown as { randomUUID?: unknown }).randomUUID;
+      if (cloneDescriptor) Object.defineProperty(globalThis, 'structuredClone', cloneDescriptor);
+      else delete (globalThis as unknown as { structuredClone?: unknown }).structuredClone;
+    }
+  });
 });
 
 it('una tarifa editada no pierde lo escrito ni adopta una versión concurrente sin revisar', async () => {

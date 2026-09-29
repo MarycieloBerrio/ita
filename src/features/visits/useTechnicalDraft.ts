@@ -11,13 +11,14 @@ import {
   getCompletedOperation,
   subscribeOperations,
 } from '../../lib/pendingOperations';
+import { cloneJson, createUuid } from '../../lib/browserCompatibility';
 export interface TechnicalDraft {
   technical: TechnicalData;
   price: string;
 }
 function fromService(service: VisitService): TechnicalDraft {
   return {
-    technical: structuredClone(service.technical),
+    technical: cloneJson(service.technical),
     price: service.price == null ? '' : String(service.price),
   };
 }
@@ -51,7 +52,7 @@ export function useTechnicalDraft(service: VisitService) {
         return false;
       }
       if (!pending.current) {
-        const snapshot = structuredClone(current.current);
+        const snapshot = cloneJson(current.current);
         const parsed = technicalDataSchema.safeParse(snapshot.technical);
         if (!parsed.success) {
           setError(
@@ -78,7 +79,7 @@ export function useTechnicalDraft(service: VisitService) {
           return false;
         }
         pending.current = {
-          id: recoveryId ?? crypto.randomUUID(),
+          id: recoveryId ?? createUuid(),
           snapshot,
           completes: complete,
           payload,

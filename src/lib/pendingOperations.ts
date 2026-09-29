@@ -1,3 +1,5 @@
+import { cloneJson } from './browserCompatibility';
+
 /**
  * Tab-scoped recovery journal for commands whose outcome is not yet known.
  *
@@ -147,7 +149,7 @@ export function findOperationRetry(action: string, payload: object) {
 export function beginOperation(entry: Omit<PendingOperation, 'state'>) {
   pending.set(key(entry.actorId, entry.id), {
     ...entry,
-    payload: structuredClone(entry.payload),
+    payload: cloneJson(entry.payload),
     state: 'sending',
   });
   persist(entry.actorId);

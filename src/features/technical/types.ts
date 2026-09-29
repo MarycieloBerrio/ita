@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cloneJson } from '../../lib/browserCompatibility';
 
 export const PATTERNS = [
   { id: 'zigzag', label: 'Zigzag' },
@@ -177,7 +178,7 @@ export function validateTechnicalCompletion(data: TechnicalData, sales?: LinkedS
 
 /** Copy only technical reference data; the new visit must decide its own sales. */
 export function copyTechnicalData(data: TechnicalData): TechnicalData {
-  const copy = structuredClone(technicalDataSchema.parse(data));
+  const copy = cloneJson(technicalDataSchema.parse(data));
   if (copy.kind !== 'general') {
     copy.saleIds = [];
     copy.saleDisposition = 'pending';
@@ -188,7 +189,7 @@ export function copyTechnicalData(data: TechnicalData): TechnicalData {
 
 export function updateMapZone(map: ColorMap, zoneId: ZoneId, value: ZoneData | null): ColorMap {
   colorMapSchema.parse(map);
-  const next = structuredClone(map);
+  const next = cloneJson(map);
   if (value === null) delete next.zones[zoneId];
   else next.zones[zoneId] = zoneSchema.parse(value);
   return next;

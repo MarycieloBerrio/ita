@@ -13,6 +13,7 @@ import {
   operationSignature,
 } from './pendingOperations';
 import { isDefiniteRejectionCode } from './operationErrors';
+import { cloneJson, createUuid } from './browserCompatibility';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 10_000, gcTime: 60_000, retry: 1, refetchOnWindowFocus: 'always' },
@@ -48,7 +49,7 @@ export async function query<T>(
 export async function command<T>(
   action: string,
   payload: object = {},
-  operationId: string = crypto.randomUUID(),
+  operationId: string = createUuid(),
   fromRecovery = false,
 ): Promise<T> {
   if (!navigator.onLine) throw new ApiError('Sin conexión. Los cambios aún no se han guardado.');
@@ -75,7 +76,7 @@ export async function command<T>(
         'OPERATION_MISSING',
       );
     acknowledgeOperation(actor, operationId);
-    return structuredClone(authorized.result) as T;
+    return cloneJson(authorized.result) as T;
   }
   const existing = getPendingOperation(actor, operationId);
   if (existing && existing.signature !== signature)
@@ -93,7 +94,7 @@ export async function command<T>(
       'Hay una confirmación incierta. Resuélvela en el aviso superior antes de guardar nuevos cambios.',
       'OPERATION_PENDING',
     );
-  const originalPayload = existing?.payload ?? structuredClone(payload);
+  const originalPayload = existing?.payload ?? cloneJson(payload);
   beginOperation({ actorId: actor, id: operationId, action, payload: originalPayload, signature });
   try {
     const { data, error } = await requireSupabase().rpc('app_command', {
@@ -102,7 +103,7 @@ export async function command<T>(
       p_operation_id: operationId,
     });
     if (error) throw new ApiError(translated(error.message), error.code);
-    completeOperation(actor, operationId, { result: structuredClone(data) }, fromRecovery);
+    completeOperation(actor, operationId, { result: cloneJson(data) }, fromRecovery);
     if (actor !== getOperationActor())
       throw new ApiError('La sesión cambió durante la confirmación.', 'AUTH_CHANGED');
     return data as T;
@@ -129,7 +130,7 @@ export async function checkPendingOperation(id: string): Promise<boolean> {
   if (actor !== getOperationActor())
     throw new ApiError('La sesión cambió durante la comprobación.', 'AUTH_CHANGED');
   if (found === null) return false; // Absence does not prove a still-running transaction was rolled back.
-  completeOperation(actor, id, { result: structuredClone(found.result) }, true);
+  completeOperation(actor, id, { result: cloneJson(found.result) }, true);
   await queryClient.invalidateQueries();
   return true;
 }

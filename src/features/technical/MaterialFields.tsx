@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { Material, MaterialGroup, Oxidant } from './types';
+import { createUuid } from '../../lib/browserCompatibility';
 
 export function TextField({
   label,
@@ -139,7 +140,7 @@ export function MaterialFields({
   noneLabel = 'No se utilizó',
 }: GroupProps) {
   function add() {
-    const common = { id: crypto.randomUUID(), name: '', reference: '', details: '' };
+    const common = { id: createUuid(), name: '', reference: '', details: '' };
     const item = oxidant ? { ...common, phase: '', concentration: '' } : common;
     onChange({ none: false, items: [...value.items, item] });
   }
