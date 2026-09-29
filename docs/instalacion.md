@@ -17,7 +17,7 @@ npx supabase db push --linked
 npx supabase migration list --linked
 ```
 
-No editar una migración ya aplicada; agregar una nueva. Guardar esquema, SQL y bloqueo de dependencias en el mismo commit cuando cambian conjuntamente. Las tablas de negocio están en `ita_private`, con RLS y sin acceso directo de clientas autenticadas. Los dos RPC públicos delegan a funciones privadas que comprueban perfil y profesional en cada lectura y escritura. Los metadatos editables de Auth nunca conceden un rol.
+No editar una migración ya aplicada; agregar una nueva (migración compensatoria para revertir; ver [release.md](release.md)). Guardar esquema, SQL y bloqueo de dependencias en el mismo commit cuando cambian conjuntamente. Las tablas de negocio están en `ita_private`, con RLS y sin acceso directo de clientas autenticadas. Los dos RPC públicos delegan a funciones privadas que comprueban perfil y profesional en cada lectura y escritura. Los metadatos editables de Auth nunca conceden un rol.
 
 ## Cuentas personales
 
@@ -35,14 +35,16 @@ La aplicación también permite cambiarla desde el nombre personal del menú, en
 
 ## Cloudflare Workers Static Assets
 
-Completar `.env.local` solo con la configuración pública de Supabase y construir con `npm run build`. `wrangler.jsonc` configura los archivos de `dist` y el retorno a `index.html` para rutas internas. `public/_headers` aplica la política de seguridad y limita conexiones al Supabase existente.
+Completar `.env.local` solo con la configuración pública de Supabase y construir con `npm run build`. Para producción, seguir [publicación y reversión](release.md): `.env.production.local` con `VITE_APP_ENV=production`, etiqueta de versión, respaldo previo y migraciones antes del frontend. `wrangler.jsonc` configura los archivos de `dist` y el retorno a `index.html` para rutas internas. `public/_headers` aplica la política de seguridad y limita conexiones al Supabase existente.
 
 ```sh
 npx wrangler login
 npm run deploy
 ```
 
-También puede cargarse el contenido de `dist` como ZIP desde Workers & Pages → Create app → Upload your static files, sin crear una aplicación Pages ni contratar complementos. Verificar allí el comportamiento de SPA y los encabezados. Si ya existe `ita`, actualizarla; no crear duplicados. Las únicas partes públicas son los archivos estáticos: todos los datos necesitan Auth y autorización del servidor.
+`npm run deploy` ejecuta `scripts/deploy-guard.mjs` antes de compilar y se detiene si el árbol tiene cambios, si `HEAD` no es `main` igual a `origin/main` con etiqueta `vX.Y.Z`, o si la configuración no es de producción. Para volver a la versión anterior: `npx wrangler rollback` (ver [release.md](release.md)).
+
+No cargar `dist` manualmente como ZIP desde el panel: esa vía salta las comprobaciones de versión y la configuración de `wrangler.jsonc` (observabilidad). Verificar allí el comportamiento de SPA y los encabezados. Si ya existe `ita`, actualizarla; no crear duplicados. Las únicas partes públicas son los archivos estáticos: todos los datos necesitan Auth y autorización del servidor.
 
 Configurar Supabase Auth Site URL y Redirect URLs con la dirección exacta publicada y `/recuperar`. No activar wildcards de redirección innecesarios. Comprobar por HTTPS acceso inicial, recarga directa de `/agenda` y `/visitas/:id`, cambio/recuperación de contraseña, rechazo API sin sesión y separación entre los dos perfiles.
 

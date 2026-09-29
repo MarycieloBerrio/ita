@@ -7,6 +7,7 @@ import {
   SQL_FILES,
   postgresEnv,
   run,
+  safeErrorSummary,
   sha256,
   temporaryWork,
 } from './backup-common.mjs';
@@ -98,9 +99,9 @@ async function main() {
   );
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
-  main().catch(() => {
+  main().catch((error) => {
     console.error(
-      'RESTORE_FAILED: destino, cifrado, esquema o conexión no válidos. No se muestran datos del volcado.',
+      `RESTORE_FAILED ${safeErrorSummary(error, 'restore')}: destino, cifrado, esquema o conexión no válidos. No se muestran datos del volcado.`,
     );
     process.exitCode = 1;
   });

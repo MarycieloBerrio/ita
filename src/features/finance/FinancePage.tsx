@@ -4,7 +4,14 @@ import { Download, Wallet } from 'lucide-react';
 import { useAppQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import type { Expense, Payment, QueryResults } from '../../lib/contracts';
-import { bogotaDate, cop, QueryFeedback, todayBogota } from '../catalog/operations';
+import {
+  bogotaDate,
+  cop,
+  OperationFeedback,
+  QueryFeedback,
+  todayBogota,
+} from '../catalog/operations';
+import Dialog from '../../components/Dialog';
 import ExpenseEditor from './ExpenseEditor';
 import PaymentEditor from './PaymentEditor';
 import CashDesk from './CashDesk';
@@ -18,12 +25,14 @@ function OwnerFinance() {
   const [tab, setTab] = useState<'report' | 'cash'>('report');
   const [expense, setExpense] = useState<Expense | 'new' | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
+  const [saved, setSaved] = useState('');
   const request = useAppQuery<QueryResults['finance']>('finance', range);
   const settings = useAppQuery<QueryResults['settings']>('settings');
   const inventory = useAppQuery<QueryResults['inventory']>('inventory', { limit: 200 });
   const report = request.data;
   const correctionAccount = report?.accounts.find((item) => item.id === payment?.account_id);
-  const validPayments = report?.payments.filter((item) => !item.corrected_by) ?? [];
+  // The finance query already excludes rectified originals (corrected_by is always null here).
+  const validPayments = report?.payments ?? [];
   const methodTotals = new Map<string, { name: string; amount: number }>();
   validPayments.forEach((item) => {
     const current = methodTotals.get(item.method_id) ?? { name: item.method_name, amount: 0 };
@@ -66,7 +75,13 @@ function OwnerFinance() {
           >
             <Download size={18} aria-hidden="true" /> Exportar CSV
           </button>
-          <button className="button" onClick={() => setExpense('new')}>
+          <button
+            className="button"
+            onClick={() => {
+              setSaved('');
+              setExpense('new');
+            }}
+          >
             Registrar egreso
           </button>
         </div>
@@ -116,32 +131,46 @@ function OwnerFinance() {
         ) : null}
       </section>
       <QueryFeedback pending={request.isPending} error={request.error} retry={request.refetch} />
+      <OperationFeedback success={saved} />
       {expense ? (
-        <ExpenseEditor
-          key={expense === 'new' ? 'new' : expense.id}
-          methods={settings.data?.payment_methods ?? []}
-          purchases={inventory.data?.movements.filter((item) => item.kind === 'purchase') ?? []}
-          correction={expense === 'new' ? undefined : expense}
+        <Dialog
+          title={expense === 'new' ? 'Registrar egreso pagado' : 'Rectificar egreso'}
           onClose={() => setExpense(null)}
-        />
+        >
+          <ExpenseEditor
+            key={expense === 'new' ? 'new' : expense.id}
+            methods={settings.data?.payment_methods ?? []}
+            purchases={inventory.data?.movements.filter((item) => item.kind === 'purchase') ?? []}
+            correction={expense === 'new' ? undefined : expense}
+            onClose={() => setExpense(null)}
+            onSaved={setSaved}
+          />
+        </Dialog>
       ) : null}
       {payment && correctionAccount ? (
-        <PaymentEditor
-          key={payment.id}
-          correction={payment}
-          account={correctionAccount}
-          methods={settings.data?.payment_methods ?? []}
-          onClose={() => setPayment(null)}
-        />
+        <Dialog title="Rectificar pago" onClose={() => setPayment(null)}>
+          <PaymentEditor
+            key={payment.id}
+            correction={payment}
+            account={correctionAccount}
+            methods={settings.data?.payment_methods ?? []}
+            onClose={() => setPayment(null)}
+            onSaved={setSaved}
+          />
+        </Dialog>
       ) : null}
-      <nav className="operation-tabs" aria-label="Finanzas">
+      <nav className="operation-tabs" aria-label="Secciones de finanzas">
         <button
+          type="button"
+          aria-pressed={tab === 'report'}
           className={tab === 'report' ? 'button' : 'button-secondary'}
           onClick={() => setTab('report')}
         >
           Reporte operativo
         </button>
         <button
+          type="button"
+          aria-pressed={tab === 'cash'}
           className={tab === 'cash' ? 'button' : 'button-secondary'}
           onClick={() => setTab('cash')}
         >
@@ -249,7 +278,7 @@ function OwnerFinance() {
                         </td>
                         <td>{cop(item.amount)}</td>
                         <td>
-                          {item.corrected_by ? 'Original rectificado' : 'Válido'}
+                          {item.correction_of ? 'Rectificación' : 'Válido'}
                           <p title={item.created_by}>
                             {settings.data?.profiles.find(
                               (profile) => profile.id === item.created_by,
@@ -257,15 +286,20 @@ function OwnerFinance() {
                           </p>
                           {item.reason ? <p>{item.reason}</p> : null}
                           {item.correction_of ? (
-                            <small>Original: {item.correction_of}</small>
+                            <small>Rectifica: {item.correction_of.slice(0, 8)}</small>
                           ) : null}
                         </td>
                         <td>
-                          {!item.corrected_by ? (
-                            <button className="button-secondary" onClick={() => setPayment(item)}>
-                              Rectificar error
-                            </button>
-                          ) : null}
+                          <button
+                            className="button-secondary"
+                            aria-label={`Rectificar error del pago de ${cop(item.amount)} · ${item.method_name} · ${bogotaDate(item.paid_at)}`}
+                            onClick={() => {
+                              setSaved('');
+                              setPayment(item);
+                            }}
+                          >
+                            Rectificar error
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -303,19 +337,24 @@ function OwnerFinance() {
                         <td>{item.method_name}</td>
                         <td>{cop(item.amount)}</td>
                         <td>
-                          {item.corrected_by ? 'Original rectificado' : 'Válido'}
+                          {item.correction_of ? 'Rectificación' : 'Válido'}
                           {item.correction_of ? (
                             <p>
-                              <small>Original: {item.correction_of}</small>
+                              <small>Rectifica: {item.correction_of.slice(0, 8)}</small>
                             </p>
                           ) : null}
                         </td>
                         <td>
-                          {!item.corrected_by ? (
-                            <button className="button-secondary" onClick={() => setExpense(item)}>
-                              Rectificar error
-                            </button>
-                          ) : null}
+                          <button
+                            className="button-secondary"
+                            aria-label={`Rectificar error del egreso «${item.concept}» de ${cop(item.amount)}`}
+                            onClick={() => {
+                              setSaved('');
+                              setExpense(item);
+                            }}
+                          >
+                            Rectificar error
+                          </button>
                         </td>
                       </tr>
                     ))}

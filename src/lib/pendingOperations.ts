@@ -1,4 +1,14 @@
-/** Tab-local recovery journal. Never persisted or replayed automatically. */
+/**
+ * Tab-scoped recovery journal for commands whose outcome is not yet known.
+ *
+ * Pending entries (never completed results) are mirrored per actor into sessionStorage so a
+ * reload of the same tab still knows the original operation key. Restored entries always come
+ * back as `uncertain`, because a request that was in flight when the page unloaded may or may
+ * not have committed. Nothing is ever replayed automatically: an entry is only re-sent when the
+ * user explicitly retries it from the banner or resubmits a form with an identical signature
+ * (see findOperationRetry). The stored copy is removed when the actor signs out or changes, so
+ * another account in this tab never sees or inherits it.
+ */
 export interface PendingOperation {
   actorId: string;
   id: string;
@@ -16,17 +26,84 @@ export interface CompletedOperation {
   needsAcknowledgement: boolean;
 }
 let actorId: string | null = null;
+const STORAGE_PREFIX = 'ita.pendingOperations.v1:';
 const pending = new Map<string, PendingOperation>();
 const completed = new Map<string, CompletedOperation>();
 const listeners = new Set<() => void>();
 let snapshot: readonly PendingOperation[] = [];
 const key = (actor: string, id: string) => `${actor}:${id}`;
+function storage(): Storage | null {
+  try {
+    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+  } catch {
+    return null;
+  }
+}
+function isStoredOperation(value: unknown, actor: string): value is PendingOperation {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    entry.actorId === actor &&
+    typeof entry.id === 'string' &&
+    typeof entry.action === 'string' &&
+    typeof entry.signature === 'string' &&
+    !!entry.payload &&
+    typeof entry.payload === 'object'
+  );
+}
+/** Mirror the current actor's unresolved entries. Storage failures only lose the reload aid. */
+function persist(actor: string) {
+  if (actor !== actorId) return;
+  const entries = [...pending.values()].filter((entry) => entry.actorId === actor);
+  try {
+    const store = storage();
+    if (!store) return;
+    if (entries.length) store.setItem(STORAGE_PREFIX + actor, JSON.stringify(entries));
+    else store.removeItem(STORAGE_PREFIX + actor);
+  } catch {
+    /* Quota or privacy mode: the in-memory journal still protects this page. */
+  }
+}
+function restore(actor: string) {
+  let stored: unknown;
+  try {
+    const raw = storage()?.getItem(STORAGE_PREFIX + actor);
+    stored = raw ? JSON.parse(raw) : [];
+  } catch {
+    stored = [];
+  }
+  if (!Array.isArray(stored)) return;
+  for (const value of stored) {
+    if (!isStoredOperation(value, actor) || pending.has(key(actor, value.id))) continue;
+    if (completed.has(key(actor, value.id))) continue;
+    pending.set(key(actor, value.id), {
+      actorId: actor,
+      id: value.id,
+      action: value.action,
+      payload: value.payload,
+      signature: value.signature,
+      state: 'uncertain',
+    });
+  }
+}
+function forget(actor: string) {
+  try {
+    storage()?.removeItem(STORAGE_PREFIX + actor);
+  } catch {
+    /* Nothing else to clean up. */
+  }
+}
 function publish() {
   snapshot = [...pending.values()].filter((entry) => entry.actorId === actorId);
   listeners.forEach((listener) => listener());
 }
 export function setOperationActor(id: string | null) {
+  if (actorId && actorId !== id) forget(actorId);
   actorId = id;
+  if (id) {
+    restore(id);
+    persist(id);
+  }
   publish();
 }
 export const getOperationActor = () => actorId;
@@ -73,11 +150,13 @@ export function beginOperation(entry: Omit<PendingOperation, 'state'>) {
     payload: structuredClone(entry.payload),
     state: 'sending',
   });
+  persist(entry.actorId);
   publish();
 }
 export function markOperationUncertain(actor: string, id: string) {
   const entry = pending.get(key(actor, id));
   if (entry) pending.set(key(actor, id), { ...entry, state: 'uncertain' });
+  persist(actor);
   publish();
 }
 export function completeOperation(
@@ -101,6 +180,7 @@ export function completeOperation(
   for (const [oldKey] of acknowledged.slice(0, Math.max(0, acknowledged.length - 100)))
     completed.delete(oldKey);
   pending.delete(key(actor, id));
+  persist(actor);
   publish();
 }
 export function acknowledgeOperation(actor: string, id: string) {

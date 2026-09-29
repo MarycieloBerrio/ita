@@ -39,6 +39,17 @@ export default function CashDesk({
                 notes,
               }
             : { session_id: opened?.id, kind, amount: integerAmount(amount), reason };
+      if (
+        action === 'cash.move' &&
+        kind === 'withdrawal' &&
+        opened &&
+        integerAmount(amount) > opened.expected_amount
+      ) {
+        operation.setError(
+          `El retiro supera el efectivo esperado en caja (${cop(opened.expected_amount)}).`,
+        );
+        return;
+      }
       const result = await operation.run(
         action,
         payload,
@@ -64,7 +75,8 @@ export default function CashDesk({
         <h2>Caja de efectivo</h2>
         <p className="muted">
           La caja esperada suma apertura, cobros en efectivo y aportes, y resta egresos en efectivo
-          y retiros. Transferencias y tarjetas permanecen fuera del cajón.
+          y retiros. Transferencias y tarjetas permanecen fuera del cajón. Al cerrar, el esperado
+          queda fijado: los registros posteriores no cambian un cierre firmado.
         </p>
         <OperationFeedback error={operation.error} success={operation.success} />
         {opened ? (

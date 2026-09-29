@@ -14,6 +14,7 @@ import {
   QueryFeedback,
   useOperation,
 } from './operations';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import './catalog.css';
 
 const formNames = { general: 'General', color: 'Color', keratin: 'Keratina' };
@@ -25,6 +26,9 @@ export function PriceCell({ service, owner }: { service: Service; owner: boolean
   const latestPrice = service.fixed_price == null ? '' : String(service.fixed_price);
   const price = draft?.price ?? latestPrice;
   const operation = useOperation();
+  useUnsavedChanges(
+    owner && service.price_mode !== 'custom' && draft !== null && price !== draft.original,
+  );
   if (service.price_mode === 'custom') return <span>Se define en cada visita</span>;
   if (!owner) return <strong>{cop(service.fixed_price)}</strong>;
   const dirty = draft !== null && price !== draft.original;

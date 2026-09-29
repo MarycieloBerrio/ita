@@ -1,9 +1,10 @@
 name: Verificar ita
 
+# Ramas de trabajo se verifican mediante su pull request; push solo en main evita ejecuciones dobles.
 on:
   pull_request:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -48,9 +49,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22.20.0'
+          node-version-file: .nvmrc
       - name: Instalar versiones bloqueadas
         run: npm ci
+      - name: Vulnerabilidades conocidas en dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
       - name: Instalar herramientas PostgreSQL 17
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -68,9 +71,11 @@ jobs:
         run: npm test
       - name: Migraciones, autorización e integridad en PGlite
         run: npm run test:db
+      - name: Funciones públicas no ejecutables por anon
+        run: npm run test:grants
       - name: Concurrencia con conexiones PostgreSQL independientes
         run: npm run test:db:native
-      - name: Restaurar copia cifrada en otra base local
+      - name: Crear copia con backup.mjs y restaurarla en otra base local
         run: npm run test:restore
       - name: Ejecutar volcado CLI con varios esquemas y herramientas nativas
         run: node tests/backup-native-pipeline.mjs

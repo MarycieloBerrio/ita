@@ -19,6 +19,24 @@ export async function verifyConcurrency(db, fixture) {
       .query('select public.app_query($1,$2::jsonb) result', [action, JSON.stringify(payload)])
       .then((r) => r.rows[0].result);
   let checks = 0;
+  // Payment dates use the database clock: a container clock may run ahead of the host.
+  const dbNow = async () => (await db.query('select clock_timestamp()::text t')).rows[0].t;
+  const pid = async (connection) =>
+    (await connection.query('select pg_backend_pid() pid')).rows[0].pid;
+  const contenders = [await pid(b), await pid(w)];
+  // Observe the lock wait in PostgreSQL itself instead of trusting a fixed sleep.
+  async function waitsForLock() {
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      const { rows } = await db.query(
+        'select count(*)::int n from pg_locks where not granted and pid = any($1::int[])',
+        [contenders],
+      );
+      if (rows[0].n > 0) return true;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    return false;
+  }
 
   // First transaction holds the authoritative row/advisory lock. The second
   // request has entered PostgreSQL before releasing the first transaction.
@@ -34,7 +52,7 @@ export async function verifyConcurrency(db, fixture) {
       .finally(() => {
         settled = true;
       });
-    await new Promise((resolve) => setTimeout(resolve, 70));
+    assert.equal(await waitsForLock(), true, 'The concurrent operation waits on a database lock');
     assert.equal(settled, false, 'The concurrent operation waits for the first transaction');
     checks++;
     await a.query('commit');
@@ -103,7 +121,7 @@ export async function verifyConcurrency(db, fixture) {
     account_id: accountA.id,
     amount: 15000,
     method_id: method.id,
-    paid_at: new Date().toISOString(),
+    paid_at: await dbNow(),
   };
   await race(
     () => cmd(a, 'payment.record', payment),
@@ -188,12 +206,12 @@ export async function verifyConcurrency(db, fixture) {
   await cmd(a, 'sale.confirm', cashSale);
   const cash = await cmd(a, 'cash.open', { opening_amount: 10000 });
   const closed = await race(
-    () =>
+    async () =>
       cmd(a, 'payment.record', {
         account_id: cashAccount.id,
         amount: 15000,
         method_id: method.id,
-        paid_at: new Date().toISOString(),
+        paid_at: await dbNow(),
       }),
     () => cmd(b, 'cash.close', { id: cash.id, version: cash.version, counted_amount: 25000 }),
   );

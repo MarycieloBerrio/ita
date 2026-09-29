@@ -5,7 +5,7 @@ import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import luxonPlugin from '@fullcalendar/luxon3';
 import esLocale from '@fullcalendar/core/locales/es';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Cake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
@@ -15,6 +15,13 @@ import { bogotaDate } from '../../lib/format';
 import { ErrorState } from '../../components/Feedback';
 import AppointmentEditor from './AppointmentEditor';
 import Dialog from '../../components/Dialog';
+// Stable references: FullCalendar diffs these props and re-initialises on new arrays/objects.
+const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, luxonPlugin];
+const headerToolbar = {
+  left: 'prev,next today',
+  center: 'title',
+  right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+};
 export default function AgendaPage() {
   const { profile, bootstrap } = useAuth();
   const navigate = useNavigate();
@@ -34,27 +41,32 @@ export default function AgendaPage() {
     from: range.from.slice(0, 10),
     to: range.to.slice(0, 10),
   });
-  const events = [
-    ...(q.data?.items ?? []).map((a) => ({
-      id: a.id,
-      title: a.client_name,
-      start: a.starts_at,
-      end: a.ends_at,
-      backgroundColor: a.professional_id === profile?.id ? '#66856b' : '#aa8598',
-      borderColor: 'transparent',
-      extendedProps: { appointment: a },
-    })),
-    ...(birthdays ? (b.data?.events ?? []) : []).map((c) => ({
-      id: `birthday-${c.id}-${c.date}`,
-      title: `🎂 ${c.name}`,
-      start: c.date,
-      allDay: true,
-      backgroundColor: '#f1e3d2',
-      textColor: '#806745',
-      borderColor: 'transparent',
-      extendedProps: { clientId: c.id },
-    })),
-  ];
+  const appointments = q.data?.items;
+  const birthdayEvents = b.data?.events;
+  const events = useMemo(
+    () => [
+      ...(appointments ?? []).map((a) => ({
+        id: a.id,
+        title: a.client_name,
+        start: a.starts_at,
+        end: a.ends_at,
+        backgroundColor: a.professional_id === profile?.id ? '#66856b' : '#aa8598',
+        borderColor: 'transparent',
+        extendedProps: { appointment: a },
+      })),
+      ...(birthdays ? (birthdayEvents ?? []) : []).map((c) => ({
+        id: `birthday-${c.id}-${c.date}`,
+        title: `🎂 ${c.name}`,
+        start: c.date,
+        allDay: true,
+        backgroundColor: '#f1e3d2',
+        textColor: '#806745',
+        borderColor: 'transparent',
+        extendedProps: { clientId: c.id },
+      })),
+    ],
+    [appointments, birthdayEvents, birthdays, profile?.id],
+  );
   return (
     <>
       <div className="page-header">
@@ -109,16 +121,12 @@ export default function AgendaPage() {
         {q.error && <ErrorState error={q.error} />}
         {birthdays && b.error && <ErrorState error={b.error} />}
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, luxonPlugin]}
+          plugins={plugins}
           timeZone="America/Bogota"
           locale={esLocale}
           initialView="timeGridWeek"
           firstDay={1}
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
-          }}
+          headerToolbar={headerToolbar}
           height="auto"
           allDayText="Todo el día"
           slotMinTime="07:00:00"
@@ -133,7 +141,7 @@ export default function AgendaPage() {
           }
           eventClick={(arg) => {
             if (arg.event.extendedProps.clientId)
-              navigate(`/clientas/${String(arg.event.extendedProps.clientId)}`);
+              void navigate(`/clientas/${String(arg.event.extendedProps.clientId)}`);
             else setEditing(arg.event.extendedProps.appointment as Appointment);
           }}
           dateClick={(arg) => {

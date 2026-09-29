@@ -33,6 +33,18 @@ Todas las tablas de negocio viven en `ita_private`, tienen RLS habilitado y deni
 
 El historial compartido excluye precios, cuentas, pagos e identificadores de citas. Los UUID de fichas históricas permiten copiar contenido técnico a una nueva ficha; esa copia obtiene una selección y tarifa actuales y no arrastra ventas, precio personalizado ni fecha de mantenimiento.
 
+### Permisos de funciones nuevas
+
+Supabase concede `execute` **explícitamente** a `anon`, `authenticated` y `service_role` sobre toda función creada en `public` (privilegios por defecto), así que `revoke ... from public` no basta. Toda función nueva en `public` o `ita_private` debe ir seguida, en la misma migración, de:
+
+```sql
+revoke all on function public.nueva_funcion(argumentos) from public, anon, authenticated;
+-- y solo si es un RPC del navegador:
+grant execute on function public.nueva_funcion(argumentos) to authenticated;
+```
+
+`npm run test:grants` (`scripts/check-grants.mjs`, también en la CI) reproduce esos privilegios en PGlite y falla si `anon` puede ejecutar alguna función o si `authenticated` obtiene un RPC público fuera de `app_query`/`app_command`. Añadir un RPC exige actualizar esta página y la lista permitida del script.
+
 ## Consultas
 
 `bootstrap`, `settings`, `catalog` e `inventory` entregan configuración y datos según rol. `clients` y `visits` devuelven `{items,total}`; aceptan `search`, `limit` (1–200, predeterminado 50) y `offset` o `page` desde cero. `client` devuelve ficha, alertas de posibles duplicados e historial técnico paginado. Las coincidencias por nombre/teléfono avisan y no impiden crear clientas homónimas.

@@ -12,3 +12,7 @@ coverage/
 backups/
 supabase/.temp/
 supabase/.branches/
+
+# Otros gestores de paquetes: el proyecto usa npm y package-lock.json.
+pnpm-lock.yaml
+pnpm-workspace.yaml

@@ -114,9 +114,12 @@ export interface Payment {
   is_cash: boolean;
   reference: string;
   created_by: UUID;
+  /** Equals `id` when the payment was voided without replacement (payment.void). */
   corrected_by: UUID | null;
   correction_of: UUID | null;
   reason: string | null;
+  voided_at: string | null;
+  void_reason: string | null;
 }
 export interface Account {
   id: UUID;
@@ -180,7 +183,11 @@ export interface CashSession extends Versioned {
   closed_at: string | null;
   opening_amount: number;
   counted_amount: number | null;
+  /** Live while open; frozen snapshot taken at cash.close once closed. */
   expected_amount: number;
+  cash_payments: number;
+  cash_expenses: number;
+  movements_net: number;
   difference: number | null;
   notes: string;
 }
@@ -404,6 +411,7 @@ export interface CommandPayloads {
     reference?: string;
     reason: string;
   };
+  'payment.void': { id: UUID; reason: string };
   'charge.correct': Versioned & { price: number; reason: string };
   'inventory.move': {
     product_id: UUID;

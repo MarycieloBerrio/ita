@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Client } from '../../lib/contracts';
 import { useOperation } from '../../lib/useOperation';
+import { useAllowNavigation } from '../../lib/useUnsavedChanges';
 import { useTypedQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useDeferredValue } from 'react';
@@ -68,6 +69,7 @@ export default function ClientEditor({
   const contact = bootstrap?.settings.responsible_contact.trim() ?? '';
   const noticeReady = Boolean(responsible && contact);
   const operation = useOperation();
+  const allowNavigation = useAllowNavigation();
   const {
     register,
     handleSubmit,
@@ -101,7 +103,11 @@ export default function ClientEditor({
       phone: parsed.phone || null,
       consent: client?.consent ?? (consent_confirmed ? CLIENT_NOTICE_VERSION : ''),
     });
-    if (result?.id) onSaved(String(result.id));
+    if (result?.id) {
+      // Saved: the host may navigate before the form has reported itself clean.
+      allowNavigation();
+      onSaved(String(result.id));
+    }
   });
   return (
     <EditorForm

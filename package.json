@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.9.3",
+  "engines": {
+    "node": ">=22.14 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
@@ -17,7 +22,8 @@
     "test:db:native": "node scripts/db-test.mjs --native",
     "test:restore": "node tests/backup-restore.mjs",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "node scripts/deploy-guard.mjs && npm run build && wrangler deploy",
+    "test:grants": "node scripts/check-grants.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "6.1.21",

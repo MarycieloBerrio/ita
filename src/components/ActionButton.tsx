@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useAuth } from '../lib/auth';
 import { useOperation } from '../lib/useOperation';
 export function ActionButton({
   action,
@@ -17,18 +18,20 @@ export function ActionButton({
   disabled?: boolean;
   confirm?: string;
 }) {
+  const { online } = useAuth();
   const { run, pending, error } = useOperation();
   const execute = async () => {
     if (pending || (confirm && !window.confirm(confirm))) return;
-    const result = await run<Record<string, unknown>>(action, payload);
-    if (result) onSuccess?.(result);
+    const result = await run<Record<string, unknown> | null>(action, payload);
+    // `undefined` is the only failure signal; a confirmed command may legitimately return null.
+    if (result !== undefined) onSuccess?.(result ?? {});
   };
   return (
     <div className="action-control">
       <button
         type="button"
         className={className}
-        disabled={disabled || pending || !navigator.onLine}
+        disabled={disabled || pending || !online}
         onClick={() => void execute()}
       >
         {pending ? 'Confirmando…' : children}

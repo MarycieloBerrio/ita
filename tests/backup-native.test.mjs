@@ -70,13 +70,26 @@ describe('native backup execution boundary', () => {
     expect(input).toContain("--schema='auth|public|ita_private'");
   });
 
-  it('requires encrypted PostgreSQL transport for a hosted source', async () => {
+  it('requires verified TLS (CA + hostname) for a hosted source and fails closed without it', async () => {
     let settings;
-    await executeNativeDump(script.replace('127.0.0.1', 'db.example.supabase.co'), 'unused', {
-      env: { ITA_BASH_BIN: '/bin/bash', ITA_PG_BIN: '/pg/bin' },
-      execute: async (_command, _args, options) => {
-        settings = options.env;
-      },
+    const hosted = script.replace('127.0.0.1', 'db.example.supabase.co');
+    const tools = { ITA_BASH_BIN: '/bin/bash', ITA_PG_BIN: '/pg/bin' };
+    const execute = async (_command, _args, options) => {
+      settings = options.env;
+    };
+    await expect(executeNativeDump(hosted, 'unused', { env: tools, execute })).rejects.toThrow(
+      'TLS_CA_REQUIRED_FOR_REMOTE_DATABASE',
+    );
+    expect(settings).toBeUndefined();
+    await executeNativeDump(hosted, 'unused', {
+      env: { ...tools, ITA_PG_SSLROOTCERT: process.execPath },
+      execute,
+    });
+    expect(settings.PGSSLMODE).toBe('verify-full');
+    expect(settings.PGSSLROOTCERT).toBe(process.execPath);
+    await executeNativeDump(hosted, 'unused', {
+      env: { ...tools, ITA_PG_ALLOW_UNVERIFIED_TLS: 'true' },
+      execute,
     });
     expect(settings.PGSSLMODE).toBe('require');
   });
@@ -88,6 +101,7 @@ describe('native backup execution boundary', () => {
       'auth,public,ita_private',
     ]);
     expect(NATIVE_DUMPS.find(([name]) => name === 'data.sql')).toContain('--use-copy');
+    expect(NATIVE_DUMPS.find(([name]) => name === 'data.sql')).toContain('auth.refresh_tokens');
     expect(NATIVE_DUMPS.find(([name]) => name === 'history_data.sql')).toContain(
       'supabase_migrations',
     );

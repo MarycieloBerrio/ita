@@ -2,6 +2,7 @@ import EditorForm from '../../components/EditorForm';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { INT4_MAX, wholeNumberText } from '../../lib/validation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FolderTree, Plus } from 'lucide-react';
 import {
@@ -16,7 +17,10 @@ const schema = z.object({
   name: z.string().trim().min(1, 'Escribe un nombre.').max(100),
   parent_id: z.string(),
   active: z.boolean(),
-  sort_order: z.string().regex(/^\d+$/, 'Utiliza un orden entero.'),
+  sort_order: wholeNumberText(INT4_MAX, {
+    format: 'Utiliza un orden entero, sin signos ni decimales.',
+    range: 'El orden debe estar entre 0 y 2.147.483.647.',
+  }),
   default_price_mode: z.enum(['', 'fixed', 'custom']),
 });
 type Values = z.infer<typeof schema>;
@@ -126,6 +130,9 @@ export default function CategoryManager({
             <label className="field">
               Orden
               <input inputMode="numeric" {...form.register('sort_order')} />
+              {form.formState.errors.sort_order ? (
+                <span className="error">{form.formState.errors.sort_order.message}</span>
+              ) : null}
             </label>
             {catalog === 'services' ? (
               <label className="field">

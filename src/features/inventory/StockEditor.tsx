@@ -2,13 +2,20 @@ import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { INT4_MAX } from '../../lib/validation';
 import type { Product, StockMovement } from '../../lib/contracts';
 import { bogotaDate, OperationFeedback, useOperation } from '../catalog/operations';
 
 const schema = z.object({
   product_id: z.string().min(1, 'Selecciona un producto.'),
   kind: z.enum(['initial', 'purchase', 'consumption', 'adjustment']),
-  quantity: z.string().regex(/^-?[1-9]\d*$/, 'Usa una cantidad entera distinta de cero.'),
+  quantity: z
+    .string()
+    .regex(/^-?[1-9]\d*$/, 'Usa una cantidad entera distinta de cero.')
+    .refine(
+      (value) => Math.abs(Number(value)) <= INT4_MAX,
+      'La cantidad debe estar entre −2.147.483.647 y 2.147.483.647 unidades.',
+    ),
   reason: z.string().trim().min(3, 'Explica el motivo.').max(1000),
   visit_id: z
     .string()

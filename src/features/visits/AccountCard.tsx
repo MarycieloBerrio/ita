@@ -5,17 +5,20 @@ import { useTypedQuery } from '../../lib/api';
 import { dateLabel, money, statusLabel } from '../../lib/format';
 import PaymentEditor from '../finance/PaymentEditor';
 import Dialog from '../../components/Dialog';
+import { OperationFeedback } from '../catalog/operations';
 export default function AccountCard({ detail }: { detail: VisitDetail }) {
   const { profile } = useAuth();
   const settings = useTypedQuery('settings');
   const [payment, setPayment] = useState(false);
   const [correction, setCorrection] = useState<Payment>();
+  const [saved, setSaved] = useState('');
   const { account } = detail;
   return (
     <aside className="card sticky-card stack">
       <div className="section-title">
         <h2>Cuenta de la visita</h2>
       </div>
+      <OperationFeedback success={saved} />
       <div>
         {detail.services.map((s) => (
           <div className="account-row" key={s.id}>
@@ -82,7 +85,7 @@ export default function AccountCard({ detail }: { detail: VisitDetail }) {
             </strong>
             <span className="muted small">
               {dateLabel(p.paid_at)}
-              {p.corrected_by ? ' · Rectificado' : ''}
+              {p.voided_at ? ' · Anulado' : p.corrected_by ? ' · Rectificado' : ''}
             </span>
             {profile?.role === 'owner' && !p.corrected_by && (
               <button className="button-secondary" onClick={() => setCorrection(p)}>
@@ -94,7 +97,7 @@ export default function AccountCard({ detail }: { detail: VisitDetail }) {
       </details>
       {(payment || correction) && (
         <Dialog
-          title="Registrar pago"
+          title={correction ? 'Rectificar pago' : 'Registrar pago'}
           onClose={() => {
             setPayment(false);
             setCorrection(undefined);
@@ -108,6 +111,7 @@ export default function AccountCard({ detail }: { detail: VisitDetail }) {
               setPayment(false);
               setCorrection(undefined);
             }}
+            onSaved={setSaved}
           />
         </Dialog>
       )}

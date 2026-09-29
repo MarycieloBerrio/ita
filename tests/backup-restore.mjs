@@ -1,19 +1,21 @@
 // Native PostgreSQL recovery test. Fictional data only; no hosted Auth service is involved.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import pg from 'pg';
-import {
-  BUNDLE_FILES,
-  SQL_FILES,
-  postgresEnv,
-  run,
-  sha256,
-  temporaryWork,
-} from '../scripts/backup-common.mjs';
-import { encryptFile } from '../scripts/backup-crypto.mjs';
+import { temporaryWork } from '../scripts/backup-common.mjs';
+import { createBackup } from '../scripts/backup.mjs';
 import { restoreBackup } from '../scripts/restore.mjs';
+
+// Fictional v2 recovery key (base64 of 32 bytes), used only against disposable local databases.
+const RECOVERY_KEY = 'bpycnAu/dlnunST4xSqwdLSBZqb+LtlSp/Oi3pwH9/g=';
+// Hosted Supabase provides the auth schema; the scheduled dump excludes it. Both local databases
+// get the same stub, including a session table whose rows the backup must NOT carry.
+const AUTH_STUB = `create schema auth; create table auth.users(id uuid primary key);
+  create table auth.sessions(id uuid primary key, user_id uuid references auth.users);
+  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+  grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`;
 
 const adminUrl = process.env.ITA_TEST_DATABASE_URL;
 if (!adminUrl || !['localhost', '127.0.0.1', '[::1]'].includes(new URL(adminUrl).hostname))
@@ -38,9 +40,7 @@ try {
   const source = new pg.Client({ connectionString: connectionFor(sourceName) });
   await source.connect();
   clients.push(source);
-  await source.query(`create schema auth; create table auth.users(id uuid primary key);
-    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
-    grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;
+  await source.query(`${AUTH_STUB}
     create schema supabase_migrations; create table supabase_migrations.schema_migrations(version text primary key);`);
   for (const file of (await readdir('supabase/migrations'))
     .filter((name) => name.endsWith('.sql'))
@@ -51,6 +51,7 @@ try {
   const owner = randomUUID(),
     worker = randomUUID();
   await source.query('insert into auth.users values($1),($2)', [owner, worker]);
+  await source.query('insert into auth.sessions values($1,$2)', [randomUUID(), owner]);
   await source.query(
     "insert into ita_private.profiles(id,display_name,role) values($1,'Dueña ficticia','owner'),($2,'Trabajadora ficticia','worker')",
     [owner, worker],
@@ -114,7 +115,8 @@ try {
     account_id: visit.account_id,
     amount: 100000,
     method_id: method.id,
-    paid_at: new Date().toISOString(),
+    // Relative to the database clock (payments must follow the work), not the test process clock.
+    paid_at: (await source.query('select now() as t')).rows[0].t.toISOString(),
   });
   const productCategory = await command('category.save', {
     name: 'Inventario ficticio',
@@ -164,60 +166,30 @@ try {
     return output;
   };
   const before = await snapshot(source);
+  const adminUser = decodeURIComponent(new URL(adminUrl).username);
   await temporaryWork(async (directory) => {
-    // Hosted Supabase provides auth schema/platform roles. This local fixture dumps its auth stub explicitly.
-    await writeFile(
-      join(directory, 'roles.sql'),
-      '-- Local test: platform roles already exist in this isolated cluster.\n',
-    );
-    await run('pg_dump', ['--schema-only', '--no-owner', '--exclude-schema=supabase_migrations'], {
-      env: postgresEnv(connectionFor(sourceName)),
-      output: join(directory, 'schema.sql'),
+    const encrypted = join(directory, 'fixture.ita.enc');
+    // Same code as `backup.mjs create`: CLI dry-run → native pg_dump → manifest → tar → AES-GCM.
+    // The only adaptation: this cluster's administrator (and pre-existing role) is not `postgres`.
+    await createBackup(encrypted, connectionFor(sourceName), RECOVERY_KEY, {
+      localTestSource: true,
+      adaptScript: (script) =>
+        script
+          .replaceAll('--role "postgres"', `--role "${adminUser}"`)
+          .replaceAll('"(anon|authenticated|', `"(${adminUser}|anon|authenticated|`),
     });
-    await run(
-      'pg_dump',
-      ['--data-only', '--no-owner', '--column-inserts', '--exclude-schema=supabase_migrations'],
-      { env: postgresEnv(connectionFor(sourceName)), output: join(directory, 'data.sql') },
-    );
-    await run('pg_dump', ['--schema-only', '--no-owner', '--schema=supabase_migrations'], {
-      env: postgresEnv(connectionFor(sourceName)),
-      output: join(directory, 'history_schema.sql'),
-    });
-    await run(
-      'pg_dump',
-      ['--data-only', '--no-owner', '--column-inserts', '--schema=supabase_migrations'],
-      { env: postgresEnv(connectionFor(sourceName)), output: join(directory, 'history_data.sql') },
-    );
-    const files = {};
-    for (const name of SQL_FILES)
-      files[name] = {
-        bytes: (await stat(join(directory, name))).size,
-        sha256: await sha256(join(directory, name)),
-      };
-    await writeFile(
-      join(directory, 'manifest.json'),
-      JSON.stringify({
-        format: 1,
-        project: 'local-fictional-fixture',
-        completed_at: new Date().toISOString(),
-        files,
-      }),
-    );
-    const archive = join(directory, 'bundle.tar'),
-      encrypted = join(directory, 'fixture.ita.enc');
-    await run('tar', ['-cf', archive, ...BUNDLE_FILES], { cwd: directory });
-    await encryptFile(archive, encrypted, 'clave-ficticia-exclusiva-de-prueba-123456789');
-    await restoreBackup(
-      encrypted,
-      connectionFor(targetName),
-      'clave-ficticia-exclusiva-de-prueba-123456789',
-      targetName,
-    );
     const target = new pg.Client({ connectionString: connectionFor(targetName) });
     await target.connect();
     clients.push(target);
+    await target.query(AUTH_STUB);
+    await restoreBackup(encrypted, connectionFor(targetName), RECOVERY_KEY, targetName);
     assert.deepEqual(await snapshot(target), before, 'Every application table preserved exactly');
     assert.equal((await target.query('select count(*) from auth.users')).rows[0].count, '2');
+    assert.equal(
+      (await target.query('select count(*) from auth.sessions')).rows[0].count,
+      '0',
+      'Auth sessions are excluded from backups',
+    );
     assert.deepEqual(
       (await target.query('select * from supabase_migrations.schema_migrations order by version'))
         .rows,
@@ -245,17 +217,11 @@ try {
     ).rows[0].result;
     assert.equal(birthdays[0].date, '2027-02-28');
     await assert.rejects(
-      () =>
-        restoreBackup(
-          encrypted,
-          connectionFor(targetName),
-          'clave-ficticia-exclusiva-de-prueba-123456789',
-          targetName,
-        ),
+      () => restoreBackup(encrypted, connectionFor(targetName), RECOVERY_KEY, targetName),
       /NOT_EMPTY/,
     );
     console.log(
-      `PASS: restauración PostgreSQL nativo; ${tables.length} tablas idénticas, 2 identidades/RLS, historial migraciones, cuenta $230000/abono $100000/saldo $130000, stock 2, agenda privada y cumpleaños. Artefacto cifrado ${(await stat(encrypted)).size} bytes. Auth HTTP hospedado pendiente.`,
+      `PASS: backup.mjs create (CLI dry-run + pg_dump nativo + cifrado v2) → restauración PostgreSQL nativo; sesiones Auth excluidas; ${tables.length} tablas idénticas, 2 identidades/RLS, historial migraciones, cuenta $230000/abono $100000/saldo $130000, stock 2, agenda privada y cumpleaños. Artefacto cifrado ${(await stat(encrypted)).size} bytes. Auth HTTP hospedado pendiente.`,
     );
   });
 } finally {

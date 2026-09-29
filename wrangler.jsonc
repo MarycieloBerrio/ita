@@ -5,4 +5,12 @@
   "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
   "workers_dev": true,
   "preview_urls": false,
+  // Workers Logs (dashboard → Workers → ita → Observability). Query strings are redacted because
+  // Auth recovery/PKCE redirects to /recuperar may carry one-time codes in the URL.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": { "enabled": true, "invocation_logs": true },
+  },
 }

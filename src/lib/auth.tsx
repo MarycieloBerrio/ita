@@ -33,6 +33,9 @@ interface AuthState {
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   online: boolean;
+  /** True only after Supabase reports a PASSWORD_RECOVERY session in this tab. */
+  recovering: boolean;
+  endRecovery: () => void;
 }
 const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -40,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(Boolean(supabase));
   const [error, setError] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
+  const [recovering, setRecovering] = useState(false);
   const generation = useRef(0);
   const identity = useRef('');
   const clearAccess = useCallback(() => {
@@ -88,7 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initialization = setTimeout(() => void refresh(), 0);
     const subscription = supabase?.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       if (event === 'SIGNED_OUT') {
+        setRecovering(false);
         generation.current++;
         clearAccess();
       } else if (
@@ -108,7 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     const focus = () => {
-      void queryClient.cancelQueries();
+      // No blanket cancelQueries(): it aborted unrelated in-flight reads (and never refetched
+      // them). invalidateQueries already cancels in-flight fetches of the matching queries
+      // (cancelRefetch defaults to true). Window focus without a visibilitychange (desktop
+      // window switching) is not covered by refetchOnWindowFocus, so the scoped refresh stays.
       void queryClient.invalidateQueries({
         predicate: (q) =>
           ['appointments', 'visit', 'visits', 'finance'].includes(String(q.queryKey[0])),
@@ -157,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh,
         signOut,
         online,
+        recovering,
+        endRecovery: () => setRecovering(false),
       }}
     >
       {children}

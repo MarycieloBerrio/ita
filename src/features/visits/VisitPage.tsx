@@ -5,7 +5,8 @@ import { useTypedQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useOperation } from '../../lib/useOperation';
 import { dateLabel, money, statusLabel } from '../../lib/format';
-import { Loading, ErrorState, Empty } from '../../components/Feedback';
+import { Loading, ErrorState, Empty, Saved } from '../../components/Feedback';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import { ActionButton } from '../../components/ActionButton';
 import ServicePicker from './ServicePicker';
 import ServiceEditor from './ServiceEditor';
@@ -24,6 +25,9 @@ function CopyPrevious({
   onClose: () => void;
 }) {
   const history = useTypedQuery('client', { id: clientId, limit: 50 });
+  const previous = history.data?.history.filter(
+    (v) => v.visit_id !== visitId && v.services.length > 0,
+  );
   return (
     <section className="stack">
       <div className="section-title">
@@ -36,26 +40,31 @@ function CopyPrevious({
         Revisa productos y fórmulas. Se crea un borrador nuevo, sin precio personalizado, pagos ni
         ventas anteriores.
       </p>
-      {history.data?.history
-        .filter((v) => v.visit_id !== visitId)
-        .map((v) => (
-          <div key={v.visit_id}>
-            <h3>{dateLabel(v.starts_at)}</h3>
-            {v.services.map((s) => (
-              <div className="account-row" key={s.id}>
-                <span>{s.name}</span>
-                <ActionButton
-                  action="service.copy"
-                  payload={{ source_id: s.id, visit_id: visitId, version }}
-                  className="button-secondary"
-                  onSuccess={onClose}
-                >
-                  Copiar ficha
-                </ActionButton>
-              </div>
-            ))}
-          </div>
-        ))}
+      {history.isPending && <Loading />}
+      {history.error && <ErrorState error={history.error} retry={() => void history.refetch()} />}
+      {previous && !previous.length && (
+        <Empty title="Sin fichas anteriores">
+          <p>Esta clienta no tiene otras visitas con fichas para copiar.</p>
+        </Empty>
+      )}
+      {previous?.map((v) => (
+        <div key={v.visit_id}>
+          <h3>{dateLabel(v.starts_at)}</h3>
+          {v.services.map((s) => (
+            <div className="account-row" key={s.id}>
+              <span>{s.name}</span>
+              <ActionButton
+                action="service.copy"
+                payload={{ source_id: s.id, visit_id: visitId, version }}
+                className="button-secondary"
+                onSuccess={onClose}
+              >
+                Copiar ficha
+              </ActionButton>
+            </div>
+          ))}
+        </div>
+      ))}
     </section>
   );
 }
@@ -72,6 +81,18 @@ export default function VisitPage() {
   const [professional, setProfessional] = useState('');
   const [reason, setReason] = useState('');
   const operation = useOperation();
+  const loaded = request.data?.visit;
+  const visitFieldsDirty =
+    !!loaded &&
+    ((notes !== null && notes !== loaded.notes) ||
+      (professional !== '' && professional !== loaded.professional_id) ||
+      reason.trim() !== '');
+  useUnsavedChanges(visitFieldsDirty || operation.pending);
+  const resetVisitFields = () => {
+    setNotes(null);
+    setProfessional('');
+    setReason('');
+  };
   if (request.isPending) return <Loading />;
   if (request.error || !request.data)
     return <ErrorState error={request.error} retry={() => void request.refetch()} />;
@@ -214,23 +235,33 @@ export default function VisitPage() {
                   className="button-secondary"
                   disabled={operation.pending || dirty}
                   onClick={() =>
-                    void operation.run('visit.save', {
-                      id: visit.id,
-                      version: visit.version,
-                      notes: notes ?? visit.notes,
-                      ...(professional ? { professional_id: professional, reason } : {}),
-                    })
+                    void operation
+                      .run(
+                        'visit.save',
+                        {
+                          id: visit.id,
+                          version: visit.version,
+                          notes: notes ?? visit.notes,
+                          ...(professional ? { professional_id: professional, reason } : {}),
+                        },
+                        'Datos de la visita guardados',
+                      )
+                      .then((result) => {
+                        if (result !== undefined) resetVisitFields();
+                      })
                   }
                 >
-                  Guardar datos de visita
+                  {operation.pending ? 'Guardando…' : 'Guardar datos de visita'}
                 </button>
               )}
+              {operation.saved && !visitFieldsDirty && <Saved>{operation.success}</Saved>}
               {profile?.role === 'owner' && visit.status !== 'void' && (
                 <ActionButton
                   action="visit.void"
                   payload={{ id: visit.id, version: visit.version, reason }}
                   disabled={!reason.trim() || dirty}
                   className="button-danger"
+                  onSuccess={resetVisitFields}
                   confirm="Anular por error de registro conserva trazabilidad y no devuelve pagos ni repone existencias. ¿Confirmar?"
                 >
                   Anular por error de registro

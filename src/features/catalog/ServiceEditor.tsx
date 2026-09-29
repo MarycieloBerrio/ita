@@ -2,6 +2,7 @@ import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { INT4_MAX, wholeNumberText } from '../../lib/validation';
 import type { Category, Service } from '../../lib/contracts';
 import { categoryPath, integerAmount, OperationFeedback, useOperation } from './operations';
 
@@ -12,17 +13,18 @@ const schema = z
     form_type: z.enum(['general', 'color', 'keratin']),
     price_mode: z.enum(['fixed', 'custom']),
     fixed_price: z.string(),
-    duration_minutes: z.string().regex(/^\d+$/, 'Introduce minutos enteros.'),
-    sort_order: z.string().regex(/^\d+$/),
+    duration_minutes: wholeNumberText(
+      1440,
+      { format: 'Introduce minutos enteros.', range: 'Usa entre 1 y 1440 minutos.' },
+      1,
+    ),
+    sort_order: wholeNumberText(INT4_MAX, {
+      format: 'Utiliza un orden entero, sin signos ni decimales.',
+      range: 'El orden debe estar entre 0 y 2.147.483.647.',
+    }),
     active: z.boolean(),
   })
   .superRefine((value, ctx) => {
-    if (Number(value.duration_minutes) < 1 || Number(value.duration_minutes) > 1440)
-      ctx.addIssue({
-        code: 'custom',
-        path: ['duration_minutes'],
-        message: 'Usa entre 1 y 1440 minutos.',
-      });
     if (value.price_mode === 'fixed' && (value.active || value.fixed_price !== '')) {
       try {
         integerAmount(value.fixed_price);
@@ -168,6 +170,9 @@ export default function ServiceEditor({
           <label className="field">
             Orden en el catálogo
             <input inputMode="numeric" {...form.register('sort_order')} />
+            {form.formState.errors.sort_order ? (
+              <span className="error">{form.formState.errors.sort_order.message}</span>
+            ) : null}
           </label>
         </div>
         <label className="actions">

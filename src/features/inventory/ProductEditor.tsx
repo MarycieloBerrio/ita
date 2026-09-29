@@ -2,6 +2,7 @@ import EditorForm from '../../components/EditorForm';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { INT4_MAX, wholeNumberText } from '../../lib/validation';
 import type { Category, Product } from '../../lib/contracts';
 import {
   categoryPath,
@@ -20,7 +21,10 @@ const schema = z
     usage: z.enum(['sale', 'internal', 'both']),
     cost: z.string(),
     sale_price: z.string(),
-    minimum_stock: z.string().regex(/^\d+$/, 'Usa unidades enteras.'),
+    minimum_stock: wholeNumberText(INT4_MAX, {
+      format: 'Usa unidades enteras, sin signos ni decimales.',
+      range: 'El stock mínimo debe estar entre 0 y 2.147.483.647 unidades.',
+    }),
     active: z.boolean(),
   })
   .superRefine((value, ctx) => {
